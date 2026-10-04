@@ -4,11 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { addDays, format, parseISO } from "date-fns";
-import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { Badge, Empty, Panel } from "@/components/ui";
 import { dayKey, fmtDate, fmtHours, toManilaInput } from "@/lib/format";
 import { logHours } from "@/lib/stats";
+import { showToast } from "@/lib/toast";
 import type { Profile, TimeLog } from "@/lib/types";
 
 type Student = Pick<Profile, "id" | "full_name" | "student_id" | "avatar_path" | "is_active" | "work_assignment" | "department_id"> & { department_name: string | null };
@@ -107,6 +108,7 @@ export function LaborReportWorkspace({ students, selectedStudentId, logs, weekSt
   const [reportDays, setReportDays] = useState<ReportDay[]>(daysWithLogs.map((date) => makeReportDay(date, groupedLogs.get(date) ?? [])));
   const [scholarSignature, setScholarSignature] = useState("");
   const [supervisorSignature, setSupervisorSignature] = useState("");
+  const [exporting, setExporting] = useState(false);
   const previousWeekHref = `${basePath}?student=${encodeURIComponent(selectedStudentId ?? "")}&week=${addDate(weekStart, -7)}`;
   const nextWeekHref = `${basePath}?student=${encodeURIComponent(selectedStudentId ?? "")}&week=${addDate(weekStart, 7)}`;
 
@@ -133,9 +135,37 @@ export function LaborReportWorkspace({ students, selectedStudentId, logs, weekSt
     setReportDays((current) => current.map((day) => day.date === oldDate ? { ...day, date: newDate } : day).sort((a, b) => a.date.localeCompare(b.date)));
   }
 
-  function exportPdf() {
-    if (!reportDays.length) return;
-    window.print();
+  async function exportWordDocument() {
+    if (!reportDays.length || !selectedStudent) return;
+    setExporting(true);
+    try {
+      const response = await fetch("/api/labor-report/docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          report: { name: reportName, workAssignment, department, periodFrom, periodTo, scholarSignature, supervisorSignature, days: reportDays },
+        }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null) as { error?: string } | null;
+        showToast(result?.error ?? "Could not export the Word report.", "error");
+        return;
+      }
+      const blob = await response.blob();
+      const fileUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const safeName = reportName.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "Student";
+      anchor.href = fileUrl;
+      anchor.download = `Work-Scholar-Labor-Report-${safeName}.docx`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+      showToast("Word labor report downloaded.", "success");
+    } catch {
+      showToast("Could not export the Word report. Check your connection and try again.", "error");
+    } finally {
+      setExporting(false);
+    }
   }
 
   const totalHours = reportDays.reduce((sum, day) => sum + (Number(day.am.hours) || 0) + (Number(day.pm.hours) || 0), 0);
@@ -189,7 +219,7 @@ export function LaborReportWorkspace({ students, selectedStudentId, logs, weekSt
             {selectedDates.length === 0 && <p className="no-print px-5 pb-4 text-sm text-muted-foreground">Select at least one day to include it in the report.</p>}
           </Panel>
 
-          <Panel title="Edit labor report" description="Edit the fields below and review the live form preview before exporting.">
+          <Panel title="Edit labor report" description="Edit the fields below and review the live form preview before downloading the Word document.">
             <div className="no-print grid gap-4 p-5 sm:grid-cols-2">
               <label><span className="label">Name of Work Scholar</span><input className="input" value={reportName} onChange={(event) => setReportName(event.target.value)} /></label>
               <label><span className="label">Work Assignment</span><input className="input" value={workAssignment} onChange={(event) => setWorkAssignment(event.target.value)} /></label>
@@ -215,8 +245,8 @@ export function LaborReportWorkspace({ students, selectedStudentId, logs, weekSt
                 <label><span className="label">Supervisor signature (printed name)</span><input className="input" value={supervisorSignature} onChange={(event) => setSupervisorSignature(event.target.value)} /></label>
               </div>
               <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-                <button type="button" className="btn btn-primary" disabled={!reportDays.length} onClick={exportPdf}><Printer size={16} />Export PDF</button>
-                <span className="text-xs text-muted-foreground">In the print dialog, choose Save as PDF.</span>
+                <button type="button" className="btn btn-primary" disabled={!reportDays.length || exporting} onClick={exportWordDocument}><FileDown size={16} />{exporting ? "Preparing Word file..." : "Download Word document"}</button>
+                <span className="text-xs text-muted-foreground">Downloads a copy of the original labor report template with your edits.</span>
               </div>
             </div>
 

@@ -103,37 +103,3 @@
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   .toast-card { animation: none; opacity: 1; transform: none; }
 }
-
-@media print {
-  @page { size: A4 portrait; margin: 12.7mm 10.9mm; }
-  html, body { background: #fff !important; color: #000 !important; }
-  body * { visibility: hidden !important; }
-  .labor-report-print, .labor-report-print * { visibility: visible !important; }
-  .labor-report-print {
-    position: absolute !important;
-    inset: 0 auto auto 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    color: #000 !important;
-    background: #fff !important;
-  }
-  .labor-report-print header { grid-template-columns: 25mm 1fr 24mm !important; }
-  .labor-report-print table { page-break-inside: auto; }
-  .labor-report-table th, .labor-report-table td {
-    border: 0.5pt solid #000 !important;
-    padding: 1.5mm 1mm !important;
-    vertical-align: middle !important;
-    overflow-wrap: anywhere !important;
-  }
-  .labor-report-table th { text-align: center !important; font-weight: 700 !important; }
-  .labor-report-table td { min-height: 8mm; }
-  .labor-report-table tr { break-inside: avoid; page-break-inside: avoid; }
-  .labor-total-row td { border-top-width: 0.75pt !important; }
-  .labor-date-cell { text-align: center !important; }
-  .labor-text-cell { white-space: pre-wrap !important; }
-  .labor-underline { display: inline-block; min-width: 35mm; border-bottom: 0.5pt solid #000; }
-  .labor-signature-value { min-height: 6mm; }
-  .labor-signature-line { border-top: 0.5pt solid #000; }
-}
