@@ -94,6 +94,21 @@ create table wallet_transfers (
 );
 create index wallet_transfers_student_idx on wallet_transfers(student_id, allocated_at desc);
 
+create table server_monitor_state (
+  singleton boolean primary key default true check (singleton),
+  last_check_at timestamptz not null,
+  process_started_at timestamptz not null
+);
+
+create table server_downtimes (
+  id uuid primary key default gen_random_uuid(),
+  started_at timestamptz not null,
+  ended_at timestamptz not null,
+  duration_seconds integer not null check (duration_seconds >= 0),
+  detected_at timestamptz not null default now()
+);
+create index server_downtimes_detected_idx on server_downtimes(detected_at desc);
+
 create or replace function capture_time_log_earning_rate()
 returns trigger language plpgsql as $$
 begin

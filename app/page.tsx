@@ -14,6 +14,7 @@ export default async function Home() {
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
         <Logo />
         <div className="flex items-center gap-2">
+          <Link href="/server" className="btn btn-ghost">Server status</Link>
           <ThemeToggle />
           <Link href="/login" className="btn btn-primary">Sign in</Link>
         </div>

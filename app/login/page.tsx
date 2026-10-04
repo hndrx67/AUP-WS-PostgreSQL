@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSessionProfile, homeFor } from "@/lib/auth";
 import { signIn } from "@/app/actions/auth";
 import { ActionForm, Field } from "@/components/action-form";
@@ -22,6 +23,7 @@ export default async function LoginPage() {
           <Field label="Email"><input className="input" name="email" type="email" autoComplete="email" required /></Field>
           <Field label="Password"><input className="input" name="password" type="password" autoComplete="current-password" required /></Field>
         </ActionForm>
+        <p className="mt-6 text-center text-sm text-muted-foreground"><Link className="hover:text-foreground" href="/server">View server status</Link></p>
       </div>
     </div>
   );

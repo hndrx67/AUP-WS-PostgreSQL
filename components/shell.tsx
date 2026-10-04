@@ -39,6 +39,7 @@ export function Shell({ profile, children }: { profile: ProfileWithDept; childre
             {profile.department ? ` in ${profile.department.name}` : ""}
           </p>
           <div className="flex items-center gap-1">
+            <Link href="/server" className="btn btn-ghost h-9 px-2 text-xs sm:px-3 sm:text-sm">Server status</Link>
             <ThemeToggle />
             <Link href="/profile" className="md:hidden" aria-label="Open profile"><ProfileAvatar profile={profile} size="sm" /></Link>
             <form action={signOut} className="md:hidden">

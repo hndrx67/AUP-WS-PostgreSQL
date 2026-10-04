@@ -10,6 +10,7 @@ const schema = await readFile(resolve(here, "../database/schema.sql"), "utf8");
 const migrations = [
   { version: "002_rfid", file: "../database/migrations/002_rfid.sql" },
   { version: "003_temporary_supervisor_credentials", file: "../database/migrations/003_temporary_supervisor_credentials.sql" },
+  { version: "004_public_server_status", file: "../database/migrations/004_public_server_status.sql" },
 ];
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const client = await pool.connect();
