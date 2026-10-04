@@ -1,4 +1,4 @@
-# AUP Work Scholars
+# AUP Work Scholars - PGSQL ver 1.3
 
 Next.js 15, React 19, TypeScript, Tailwind CSS, and PostgreSQL. Supabase is no longer part of the runtime or authentication flow. The app owns password hashing and cookie sessions; PostgreSQL stores app accounts, sessions, departments, schedules, time logs, and financial records.
 
