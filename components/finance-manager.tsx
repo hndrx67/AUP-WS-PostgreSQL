@@ -1,4 +1,5 @@
 import { ActionForm, Field } from "@/components/action-form";
+import { DestructiveConfirmationDialog } from "@/components/destructive-confirmation-dialog";
 import { TableWrap, Empty, Panel } from "@/components/ui";
 import { allocateToPersonalWallet, deleteStudentWithdrawal, recordStudentWithdrawal, setSchoolTuitionBalance } from "@/app/actions/finances";
 import { fmtDate, peso } from "@/lib/format";
@@ -91,9 +92,7 @@ export function FinanceManager({ rows, transfers, payouts, canWithdraw = true, c
                   <td className="td">{peso(entry.amount)}</td>
                   <td className="td text-muted-foreground">{entry.note ?? "-"}</td>
                   {canDelete && <td className="td text-right">{entry.kind === "Wallet withdrawal" && (
-                    <ActionForm action={deleteStudentWithdrawal} submit="Delete" buttonContainerClassName="" buttonClassName="btn btn-danger h-8 px-2">
-                      <input type="hidden" name="id" value={entry.id} />
-                    </ActionForm>
+                    <DestructiveConfirmationDialog action={deleteStudentWithdrawal} fields={{ id: entry.id }} trigger="Delete" buttonClassName="btn btn-danger h-8 px-2" title="Delete withdrawal" />
                   )}</td>}
                 </tr>
               ))}

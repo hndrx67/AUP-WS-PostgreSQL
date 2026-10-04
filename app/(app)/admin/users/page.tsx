@@ -6,6 +6,7 @@ import { Badge, Empty, PageHeader, Panel } from "@/components/ui";
 import { ROLE_LABEL } from "@/lib/nav";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { ChangeCredentialsDialog } from "@/components/change-credentials-dialog";
+import { DestructiveConfirmationDialog } from "@/components/destructive-confirmation-dialog";
 import type { Department, ProfileWithDept } from "@/lib/types";
 
 export const metadata = { title: "Users and assignments" };
@@ -104,13 +105,15 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
                       )}
                       {u.id !== me.id && (
                         <>
-                          <ActionForm action={setUserActive} submit={u.is_active ? "Deactivate" : "Reactivate"} buttonContainerClassName="" buttonClassName={u.is_active ? "btn btn-danger" : "btn btn-outline"}>
-                            <input type="hidden" name="user_id" value={u.id} />
-                            <input type="hidden" name="active" value={String(!u.is_active)} />
-                          </ActionForm>
-                          <ActionForm action={deleteUserAccount} submit="Delete permanently" buttonContainerClassName="" buttonClassName="btn btn-danger">
-                            <input type="hidden" name="user_id" value={u.id} />
-                          </ActionForm>
+                          {u.is_active ? (
+                            <DestructiveConfirmationDialog action={setUserActive} fields={{ user_id: u.id, active: "false" }} trigger="Deactivate" title={`Deactivate ${u.full_name}`} description="This disables the account and revokes its active sessions. Enter your password to continue." />
+                          ) : (
+                            <ActionForm action={setUserActive} submit="Reactivate" buttonContainerClassName="" buttonClassName="btn btn-outline">
+                              <input type="hidden" name="user_id" value={u.id} />
+                              <input type="hidden" name="active" value="true" />
+                            </ActionForm>
+                          )}
+                          <DestructiveConfirmationDialog action={deleteUserAccount} fields={{ user_id: u.id }} trigger="Delete permanently" title={`Delete ${u.full_name}`} />
                         </>
                       )}
                     </div>

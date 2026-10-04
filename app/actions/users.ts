@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSessionProfile } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth/password";
+import { verifyCurrentPassword } from "@/lib/auth/verify-current-password";
 import { query, transaction } from "@/lib/db";
 import type { ActionState, Role } from "@/lib/types";
 
@@ -171,6 +172,7 @@ export async function setUserActive(_prev: ActionState, fd: FormData): Promise<A
   const userId = String(fd.get("user_id") ?? "");
   if (userId === me.id) return { error: "You cannot deactivate your own account." };
   const active = String(fd.get("active")) === "true";
+  if (!active && !(await verifyCurrentPassword(me.id, String(fd.get("confirmation_password") ?? "")))) return { error: "Your password is incorrect." };
   try {
     await transaction(async (client) => {
       await client.query("update profiles set is_active = $2 where id = $1", [userId, active]);
@@ -231,6 +233,7 @@ export async function updateDepartmentStudent(_prev: ActionState, fd: FormData):
 export async function deleteUserAccount(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await getSessionProfile();
   if (!me?.is_active || me.role !== "admin") return { error: "Only active administrators can delete accounts." };
+  if (!(await verifyCurrentPassword(me.id, String(fd.get("confirmation_password") ?? "")))) return { error: "Your password is incorrect." };
   const userId = String(fd.get("user_id") ?? "");
   if (!userId || userId === me.id) return { error: "You cannot delete your own account." };
   try {

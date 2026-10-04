@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSessionProfile } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { verifyCurrentPassword } from "@/lib/auth/verify-current-password";
 import type { ActionState } from "@/lib/types";
 
 export async function addSchedule(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -36,6 +37,7 @@ export async function addSchedule(_prev: ActionState, fd: FormData): Promise<Act
 export async function deleteSchedule(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await getSessionProfile();
   if (!me?.is_active || (me.role !== "supervisor" && me.role !== "admin")) return { error: "Only active supervisors and administrators can remove shifts." };
+  if (!(await verifyCurrentPassword(me.id, String(fd.get("confirmation_password") ?? "")))) return { error: "Your password is incorrect." };
   try {
     const values: unknown[] = [String(fd.get("id") ?? "")];
     let scope = "";

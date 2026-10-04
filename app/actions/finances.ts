@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { PoolClient } from "pg";
 import { getSessionProfile } from "@/lib/auth";
+import { verifyCurrentPassword } from "@/lib/auth/verify-current-password";
 import { query, transaction } from "@/lib/db";
 import type { ActionState } from "@/lib/types";
 
@@ -114,6 +115,7 @@ export async function recordStudentWithdrawal(_prev: ActionState, fd: FormData):
 export async function deleteStudentWithdrawal(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await getSessionProfile();
   if (!me?.is_active || me.role !== "admin") return { error: "Only active administrators can delete withdrawals." };
+  if (!(await verifyCurrentPassword(me.id, String(fd.get("confirmation_password") ?? "")))) return { error: "Your password is incorrect." };
   try {
     await transaction(async (client) => {
       const { rows } = await client.query<{ student_id: string; amount: string; legacy_wallet_settled: boolean }>("select student_id, amount, legacy_wallet_settled from payouts where id = $1 for update", [String(fd.get("id") ?? "")]);

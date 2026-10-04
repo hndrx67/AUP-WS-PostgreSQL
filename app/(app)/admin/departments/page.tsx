@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createPostgresClient } from "@/lib/postgres-client";
 import { createDepartment, deleteDepartment } from "@/app/actions/departments";
 import { ActionForm, Field } from "@/components/action-form";
+import { DestructiveConfirmationDialog } from "@/components/destructive-confirmation-dialog";
 import { Empty, PageHeader, Panel, TableWrap } from "@/components/ui";
 import type { Department, Profile } from "@/lib/types";
 
@@ -36,9 +37,7 @@ export default async function DepartmentsPage() {
                       <td className="td">{sups.length ? sups.map((s) => s.full_name).join(", ") : <span className="text-muted-foreground">None</span>}</td>
                       <td className="td">{studs.length}</td>
                       <td className="td text-right">
-                        <ActionForm action={deleteDepartment} submit={<Trash2 size={16} />} buttonContainerClassName="" buttonClassName="btn btn-danger h-8 px-2" buttonAriaLabel={`Delete ${d.name}`}>
-                          <input type="hidden" name="id" value={d.id} />
-                        </ActionForm>
+                        <DestructiveConfirmationDialog action={deleteDepartment} fields={{ id: d.id }} trigger={<Trash2 size={16} />} buttonClassName="btn btn-danger h-8 px-2" buttonAriaLabel={`Delete ${d.name}`} title={`Delete ${d.name}`} />
                       </td>
                     </tr>
                   );

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { getSessionProfile } from "@/lib/auth";
+import { verifyCurrentPassword } from "@/lib/auth/verify-current-password";
 import type { ActionState } from "@/lib/types";
 
 export async function createDepartment(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -21,6 +22,7 @@ export async function createDepartment(_prev: ActionState, fd: FormData): Promis
 export async function deleteDepartment(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await getSessionProfile();
   if (!me?.is_active || me.role !== "admin") return { error: "Only active administrators can delete departments." };
+  if (!(await verifyCurrentPassword(me.id, String(fd.get("confirmation_password") ?? "")))) return { error: "Your password is incorrect." };
   // Members are kept and become unassigned (on delete set null).
   try { await query("delete from departments where id = $1", [String(fd.get("id") ?? "")]); }
   catch { return { error: "Could not delete this department." }; }

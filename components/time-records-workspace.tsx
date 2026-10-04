@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth,
   isToday, startOfMonth, startOfWeek, subMonths,
@@ -10,7 +10,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ActionForm, Field } from "@/components/action-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { Badge, Empty, Panel } from "@/components/ui";
-import { deleteTimeLog, overrideTimeLog } from "@/app/actions/timelogs";
+import { deleteTimeLogs, overrideTimeLog } from "@/app/actions/timelogs";
+import { DestructiveConfirmationDialog } from "@/components/destructive-confirmation-dialog";
 import { fmtDate, fmtHours, fmtTime, toManilaInput, dayKey, DAYS } from "@/lib/format";
 import { logHours } from "@/lib/stats";
 import type { Profile, TimeLog } from "@/lib/types";
@@ -43,19 +44,19 @@ function TimeLogEditor({ log }: { log: Log }) {
         <Field label="Time out"><input className="input" type="datetime-local" name="time_out" defaultValue={toManilaInput(log.time_out)} /></Field>
         <Field label="Reason"><input className="input" name="reason" required /></Field>
       </ActionForm>
-      <ActionForm action={deleteTimeLog} submit="Delete record" buttonContainerClassName="mt-3" buttonClassName="btn btn-danger">
-        <input type="hidden" name="id" value={log.id} />
-      </ActionForm>
+      <div className="mt-3"><DestructiveConfirmationDialog ids={[log.id]} action={deleteTimeLogs} trigger="Delete record" /></div>
     </div>
   );
 }
 
-function RecordRow({ log, editable }: { log: Log; editable: boolean }) {
+function RecordRow({ log, editable, manage, selected, onToggle }: { log: Log; editable: boolean; manage: boolean; selected: boolean; onToggle: (id: string, checked: boolean) => void }) {
   return (
     <li>
-      {editable ? (
-        <details className="group">
-          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm hover:bg-muted/50">
+      <div className="flex items-start gap-3 px-4">
+        {manage && <input type="checkbox" aria-label={`Select record from ${fmtDate(log.time_in)}`} checked={selected} onChange={(event) => onToggle(log.id, event.target.checked)} className="mt-4 h-4 w-4 accent-primary" />}
+        {editable ? (
+          <details className="group min-w-0 flex-1">
+            <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 py-3 text-sm hover:bg-muted/50">
             <span>{fmtDate(log.time_in)}, {fmtTime(log.time_in)} to {log.time_out ? fmtTime(log.time_out) : "now"}</span>
             <span className="flex items-center gap-2 text-muted-foreground">
               {log.time_out ? fmtHours(logHours(log)) : <Badge tone="success">In progress</Badge>}
@@ -63,21 +64,22 @@ function RecordRow({ log, editable }: { log: Log; editable: boolean }) {
             </span>
           </summary>
           <TimeLogEditor log={log} />
-        </details>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
+          </details>
+        ) : (
+          <div className="flex flex-1 flex-wrap items-center justify-between gap-2 py-3 text-sm">
           <span>{fmtDate(log.time_in)}, {fmtTime(log.time_in)} to {log.time_out ? fmtTime(log.time_out) : "now"}</span>
           <span className="flex items-center gap-2 text-muted-foreground">
             {log.time_out ? fmtHours(logHours(log)) : <Badge tone="success">In progress</Badge>}
             {log.override_reason && <Badge tone="warning">Adjusted</Badge>}
           </span>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </li>
   );
 }
 
-function RecordsCalendar({ logs, editable }: { logs: Log[]; editable: boolean }) {
+function RecordsCalendar({ logs, editable, manage, selectedIds, onToggle }: { logs: Log[]; editable: boolean; manage: boolean; selectedIds: Set<string>; onToggle: (id: string, checked: boolean) => void }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [selected, setSelected] = useState(() => new Date());
   const [recordPage, setRecordPage] = useState(1);
@@ -130,9 +132,13 @@ function RecordsCalendar({ logs, editable }: { logs: Log[]; editable: boolean })
         {selectedLogs.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No records for this day.</p> : (
           <ul className="mt-3 divide-y divide-border">{visibleLogs.map((log) => (
             <li key={log.id} className="py-2">
-              <p className="text-sm">{fmtTime(log.time_in)} to {log.time_out ? fmtTime(log.time_out) : "now"}</p>
+              <div className="flex items-start gap-2">
+                {manage && <input type="checkbox" aria-label={`Select record from ${fmtTime(log.time_in)}`} checked={selectedIds.has(log.id)} onChange={(event) => onToggle(log.id, event.target.checked)} className="mt-1 h-4 w-4 accent-primary" />}
+                <div><p className="text-sm">{fmtTime(log.time_in)} to {log.time_out ? fmtTime(log.time_out) : "now"}</p>
               <p className="text-xs text-muted-foreground">{log.time_out ? fmtHours(logHours(log)) : "Still clocked in"}{log.override_reason ? " · Adjusted" : ""}</p>
               {editable && <details className="mt-2"><summary className="cursor-pointer text-xs text-primary">Edit or delete</summary><div className="mt-2"><TimeLogEditor log={log} /></div></details>}
+                </div>
+              </div>
             </li>
           ))}</ul>
         )}
@@ -152,10 +158,25 @@ export function TimeRecordsWorkspace({ students, selectedStudentId, logs, editab
   const [studentLayout, setStudentLayout] = useState<"list" | "cards">("list");
   const [recordsView, setRecordsView] = useState<View>("list");
   const [recordPage, setRecordPage] = useState(1);
+  const [manageRecords, setManageRecords] = useState(false);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set());
   const selectedStudent = students.find((student) => student.id === selectedStudentId) ?? null;
   const pageCount = Math.max(1, Math.ceil(logs.length / PAGE_SIZE));
   const page = Math.min(recordPage, pageCount);
   const visibleLogs = logs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const selectedIds = new Set(logs.filter((log) => selectedRecordIds.has(log.id)).map((log) => log.id));
+  useEffect(() => {
+    setSelectedRecordIds((current) => {
+      const available = new Set(logs.map((log) => log.id));
+      const next = new Set([...current].filter((id) => available.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [logs]);
+  const toggleRecord = (id: string, checked: boolean) => setSelectedRecordIds((current) => {
+    const next = new Set(current);
+    if (checked) next.add(id); else next.delete(id);
+    return next;
+  });
   const studentHref = (id: string) => `${basePath}?student=${encodeURIComponent(id)}`;
 
   return (
@@ -193,15 +214,18 @@ export function TimeRecordsWorkspace({ students, selectedStudentId, logs, editab
           </Panel>
           <Panel title="Time records">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-              <span className="text-sm text-muted-foreground">{recordsView === "list" ? "Record list" : "Calendar"}</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={manageRecords} onChange={(event) => { setManageRecords(event.target.checked); if (!event.target.checked) setSelectedRecordIds(new Set()); }} className="h-4 w-4 accent-primary" />Manage</label>
+                {manageRecords && <DestructiveConfirmationDialog ids={[...selectedIds]} action={deleteTimeLogs} trigger={`Delete selected (${selectedIds.size})`} title="Delete selected time records" />}
+              </div>
               <div className="flex gap-2">
                 <button type="button" className={`btn btn-sm ${recordsView === "list" ? "btn-primary" : "btn-outline"}`} aria-pressed={recordsView === "list"} onClick={() => setRecordsView("list")}>List view</button>
                 <button type="button" className={`btn btn-sm ${recordsView === "calendar" ? "btn-primary" : "btn-outline"}`} aria-pressed={recordsView === "calendar"} onClick={() => setRecordsView("calendar")}>Calendar view</button>
               </div>
             </div>
-            {logs.length === 0 ? <Empty>No time records for this student.</Empty> : recordsView === "calendar" ? <RecordsCalendar logs={logs} editable={editable} /> : (
+            {logs.length === 0 ? <Empty>No time records for this student.</Empty> : recordsView === "calendar" ? <RecordsCalendar logs={logs} editable={editable} manage={manageRecords} selectedIds={selectedIds} onToggle={toggleRecord} /> : (
               <>
-                <ul className="divide-y divide-border">{visibleLogs.map((log) => <RecordRow key={log.id} log={log} editable={editable} />)}</ul>
+                <ul className="divide-y divide-border">{visibleLogs.map((log) => <RecordRow key={log.id} log={log} editable={editable} manage={manageRecords} selected={selectedIds.has(log.id)} onToggle={toggleRecord} />)}</ul>
                 <Pagination page={page} pageCount={pageCount} onPageChange={setRecordPage} />
               </>
             )}

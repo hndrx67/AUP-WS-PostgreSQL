@@ -1,6 +1,7 @@
 import { Trash2 } from "lucide-react";
 import { addSchedule, deleteSchedule } from "@/app/actions/schedules";
 import { ActionForm, Field } from "@/components/action-form";
+import { DestructiveConfirmationDialog } from "@/components/destructive-confirmation-dialog";
 import { Empty, Panel, TableWrap } from "@/components/ui";
 import { DAYS, fmtClock } from "@/lib/format";
 
@@ -24,9 +25,7 @@ export function ScheduleManager({ students, schedules }: { students: Student[]; 
                   <td className="td">{DAYS[s.day_of_week]}</td>
                   <td className="td">{fmtClock(s.start_time)} to {fmtClock(s.end_time)}</td>
                   <td className="td text-right">
-                    <ActionForm action={deleteSchedule} submit={<Trash2 size={16} />} buttonContainerClassName="" buttonClassName="btn btn-danger h-8 px-2" buttonAriaLabel="Remove shift">
-                      <input type="hidden" name="id" value={s.id} />
-                    </ActionForm>
+                    <DestructiveConfirmationDialog action={deleteSchedule} fields={{ id: s.id }} trigger={<Trash2 size={16} />} buttonClassName="btn btn-danger h-8 px-2" buttonAriaLabel="Remove shift" title="Remove shift" />
                   </td>
                 </tr>
               ))}
