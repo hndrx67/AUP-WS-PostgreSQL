@@ -95,6 +95,7 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
                           </select>
                           {u.role === "student" && (
                             <>
+                              <input name="student_id" defaultValue={u.student_id ?? ""} className="input w-32" aria-label={`Student ID for ${u.full_name}`} placeholder="Student ID" />
                               <input name="hourly_rate" type="number" min={0} step="0.01" defaultValue={Number(u.hourly_rate)} className="input w-24" aria-label={`Hourly rate for ${u.full_name}`} />
                               <input name="work_assignment" defaultValue={u.work_assignment ?? ""} className="input w-36" aria-label={`Work assignment for ${u.full_name}`} placeholder="Work assignment" />
                             </>

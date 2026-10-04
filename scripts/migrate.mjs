@@ -7,6 +7,9 @@ if (!process.env.DATABASE_URL) throw new Error("Set DATABASE_URL in .env.local b
 
 const here = dirname(fileURLToPath(import.meta.url));
 const schema = await readFile(resolve(here, "../database/schema.sql"), "utf8");
+const migrations = [
+  { version: "002_rfid", file: "../database/migrations/002_rfid.sql" },
+];
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const client = await pool.connect();
 const requiredTables = ["departments", "profiles", "sessions", "time_logs", "schedules", "payouts", "wallet_transfers"];
@@ -27,21 +30,28 @@ try {
       applied_at timestamptz NOT NULL DEFAULT now()
     )
   `);
-  const applied = await client.query("SELECT 1 FROM schema_migrations WHERE version = '001_initial' LIMIT 1");
-  if (applied.rowCount) {
-    await client.query("COMMIT");
-    console.log("Initial PostgreSQL schema is already applied; nothing to do.");
-  } else if (present === requiredTables.length) {
+  const initialApplied = await client.query("SELECT 1 FROM schema_migrations WHERE version = '001_initial' LIMIT 1");
+  if (!initialApplied.rowCount && present === requiredTables.length) {
     // The first schema was installed before the migration ledger existed.
     await client.query("INSERT INTO schema_migrations (version) VALUES ('001_initial') ON CONFLICT DO NOTHING");
-    await client.query("COMMIT");
-    console.log("Existing initial schema found and recorded; nothing to change.");
-  } else {
+  } else if (!initialApplied.rowCount && present === 0) {
     await client.query(schema);
     await client.query("INSERT INTO schema_migrations (version) VALUES ('001_initial')");
-    await client.query("COMMIT");
-    console.log("PostgreSQL schema installed successfully.");
   }
+
+  const appliedMigrations = [];
+  for (const migration of migrations) {
+    const applied = await client.query("SELECT 1 FROM schema_migrations WHERE version = $1 LIMIT 1", [migration.version]);
+    if (applied.rowCount) continue;
+    const sql = await readFile(resolve(here, migration.file), "utf8");
+    await client.query(sql);
+    await client.query("INSERT INTO schema_migrations (version) VALUES ($1)", [migration.version]);
+    appliedMigrations.push(migration.version);
+  }
+
+  await client.query("COMMIT");
+  if (appliedMigrations.length) console.log(`PostgreSQL migrations applied: ${appliedMigrations.join(", ")}.`);
+  else console.log("PostgreSQL schema is up to date; nothing to do.");
 } catch (error) {
   await client.query("ROLLBACK").catch(() => undefined);
   throw error;

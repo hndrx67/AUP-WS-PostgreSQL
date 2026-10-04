@@ -40,13 +40,13 @@ export function TimeInOutKiosk() {
               <input
                 ref={inputRef}
                 className="input pl-10 text-lg"
-                name="student_id"
+                name="identifier"
                 type="text"
                 autoComplete="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                aria-label="Student ID or RFID card"
-                placeholder="Enter or scan your ID"
+                aria-label="Student ID or RFID card code"
+                placeholder="Enter a student ID or scan RFID"
                 maxLength={100}
                 required
                 disabled={pending}

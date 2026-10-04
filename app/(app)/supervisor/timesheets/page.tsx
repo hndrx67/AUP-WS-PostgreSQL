@@ -23,8 +23,8 @@ export default async function SupervisorTimesheets({ searchParams }: { searchPar
 
   return (
     <>
-      <PageHeader title="Time records" description="Choose a student to review time records from your department. Contact an administrator to correct or delete a record." />
-      <TimeRecordsWorkspace students={students} selectedStudentId={selectedStudent ? selectedStudentId : null} logs={logsResult.rows} editable={false} basePath="/supervisor/timesheets" />
+      <PageHeader title="Time records" description="Choose a student to review or correct time records from your department. Every override needs a reason." />
+      <TimeRecordsWorkspace students={students} selectedStudentId={selectedStudent ? selectedStudentId : null} logs={logsResult.rows} editable basePath="/supervisor/timesheets" />
     </>
   );
 }

@@ -21,6 +21,7 @@ create table profiles (
   role text not null default 'student' check (role in ('student', 'supervisor', 'admin')),
   department_id uuid references departments(id) on delete set null,
   student_id text,
+  rfid_code text,
   work_assignment text,
   hourly_rate numeric(8,2) not null default 0 check (hourly_rate >= 0),
   school_tuition_balance numeric(10,2) not null default 0,
@@ -32,6 +33,7 @@ create table profiles (
 create index profiles_department_idx on profiles(department_id);
 create index profiles_role_idx on profiles(role);
 create unique index profiles_student_id_idx on profiles(student_id) where student_id is not null and student_id <> '';
+create unique index profiles_rfid_code_idx on profiles(rfid_code) where rfid_code is not null and rfid_code <> '';
 
 create table sessions (
   id uuid primary key default gen_random_uuid(),

@@ -22,6 +22,10 @@ async function createAccount(a: NewAccount): Promise<ActionState> {
   if (!/^\S+@\S+\.\S+$/.test(a.email)) return { error: "Enter a valid email address." };
   if (a.password.length < 8) return { error: "Password must be at least 8 characters." };
   if (!(a.hourly_rate >= 0)) return { error: "Hourly rate must be zero or more." };
+  if (a.role === "student" && a.student_id) {
+    const collision = await query("select 1 from profiles where student_id = $1 or rfid_code = $1 limit 1", [a.student_id]);
+    if (collision.rowCount) return { error: "That student ID is already assigned as a student ID or RFID code." };
+  }
 
   try {
     const passwordHash = await hashPassword(a.password);
@@ -86,6 +90,12 @@ export async function updateUserAssignment(_prev: ActionState, fd: FormData): Pr
   if (!me?.is_active || me.role !== "admin") return { error: "Only active administrators can edit account assignments." };
   const userId = String(fd.get("user_id") ?? "");
   const departmentId = String(fd.get("department_id") ?? "") || null;
+  const studentId = String(fd.get("student_id") ?? "").trim() || null;
+  if (fd.has("student_id") && studentId && studentId.length > 100) return { error: "Student ID must be 100 characters or fewer." };
+  if (fd.has("student_id") && studentId) {
+    const collision = await query("select 1 from profiles where id <> $1 and rfid_code = $2 limit 1", [userId, studentId]);
+    if (collision.rowCount) return { error: "That student ID is already assigned as another student's RFID code." };
+  }
   const update: Record<string, unknown> = { department_id: departmentId };
   const rate = fd.get("hourly_rate");
   if (rate !== null && String(rate) !== "") update.hourly_rate = Math.max(0, Number(rate) || 0);
@@ -94,15 +104,65 @@ export async function updateUserAssignment(_prev: ActionState, fd: FormData): Pr
     await query(
       `update profiles set department_id = $2,
          hourly_rate = case when $3::numeric is null then hourly_rate else $3 end,
-         work_assignment = case when $4::boolean then $5 else work_assignment end
+         work_assignment = case when $4::boolean then $5 else work_assignment end,
+         student_id = case when $6::boolean then $7 else student_id end
        where id = $1`,
-      [userId, departmentId, rate !== null && String(rate) !== "" ? Math.max(0, Number(rate) || 0) : null, fd.has("work_assignment"), String(fd.get("work_assignment") ?? "").trim() || null],
+      [userId, departmentId, rate !== null && String(rate) !== "" ? Math.max(0, Number(rate) || 0) : null, fd.has("work_assignment"), String(fd.get("work_assignment") ?? "").trim() || null, fd.has("student_id"), studentId],
     );
   } catch {
     return { error: "Could not update this account." };
   }
   revalidatePath("/admin", "layout");
   return { ok: "Student assignment updated." };
+}
+
+/** Assign an RFID code to a student; supervisors are restricted to their department. */
+export async function assignStudentRfid(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const me = await getSessionProfile();
+  if (!me?.is_active || (me.role !== "admin" && me.role !== "supervisor")) {
+    return { error: "Only active administrators and supervisors can assign RFID codes." };
+  }
+  if (me.role === "supervisor" && !me.department_id) {
+    return { error: "You must be assigned to a department to assign RFID codes." };
+  }
+
+  const studentId = String(fd.get("student_id") ?? "");
+  const rfidCode = String(fd.get("rfid_code") ?? "").trim() || null;
+  if (!studentId) return { error: "Choose a student." };
+  if (rfidCode && rfidCode.length > 100) return { error: "RFID codes must be 100 characters or fewer." };
+
+  try {
+    await transaction(async (client) => {
+      const scope = me.role === "admin" ? "" : "and department_id = $2";
+      const student = await client.query<{ id: string; student_id: string | null }>(
+        `select id, student_id from profiles where id = $1 and role = 'student' ${scope} for update`,
+        me.role === "admin" ? [studentId] : [studentId, me.department_id],
+      );
+      if (!student.rowCount) throw new Error("STUDENT_NOT_IN_SCOPE");
+      if (!student.rows[0].student_id) throw new Error("STUDENT_ID_REQUIRED");
+
+      if (rfidCode) {
+        await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [rfidCode]);
+        const collision = await client.query(
+          "select 1 from profiles where id <> $1 and (rfid_code = $2 or student_id = $2) limit 1",
+          [studentId, rfidCode],
+        );
+        if (collision.rowCount) throw new Error("RFID_ALREADY_USED");
+      }
+
+      await client.query("update profiles set rfid_code = $2 where id = $1", [studentId, rfidCode]);
+    });
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    const message = (error as Error).message;
+    if (message === "STUDENT_NOT_IN_SCOPE") return { error: "That student is not in your department." };
+    if (message === "STUDENT_ID_REQUIRED") return { error: "Assign a student ID before linking an RFID code." };
+    if (message === "RFID_ALREADY_USED" || code === "23505") return { error: "That RFID code is already assigned to another student or student ID." };
+    return { error: "Could not save the RFID assignment." };
+  }
+
+  revalidatePath(me.role === "admin" ? "/admin" : "/supervisor", "layout");
+  return { ok: rfidCode ? "RFID code assigned." : "RFID assignment removed." };
 }
 
 export async function setUserActive(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -134,6 +194,11 @@ export async function updateDepartmentStudent(_prev: ActionState, fd: FormData):
 
   const update: Record<string, unknown> = {};
   if (fd.has("student_id")) update.student_id = String(fd.get("student_id") ?? "").trim() || null;
+  if (fd.has("student_id") && update.student_id) {
+    if (String(update.student_id).length > 100) return { error: "Student ID must be 100 characters or fewer." };
+    const collision = await query("select 1 from profiles where id <> $1 and rfid_code = $2 limit 1", [userId, update.student_id]);
+    if (collision.rowCount) return { error: "That student ID is already assigned as another student's RFID code." };
+  }
   if (fd.has("work_assignment")) update.work_assignment = String(fd.get("work_assignment") ?? "").trim() || null;
   if (fd.has("hourly_rate")) {
     const rate = Number(fd.get("hourly_rate"));

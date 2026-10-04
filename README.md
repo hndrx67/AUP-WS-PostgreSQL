@@ -20,7 +20,7 @@ Next.js 15, React 19, TypeScript, Tailwind CSS, and PostgreSQL. Supabase is no l
    npm run db:migrate
    ```
 
-   This applies [`database/schema.sql`](database/schema.sql) to a fresh database inside a transaction. The command records the initial schema in `schema_migrations`, so rerunning it is safe. If it detects a partial schema, it stops for inspection instead of trying to recreate tables.
+   This applies [`database/schema.sql`](database/schema.sql) and any pending files in `database/migrations/` inside a transaction. The command records applied versions in `schema_migrations`, so rerunning it is safe. If it detects a partial schema, it stops for inspection instead of trying to recreate tables. Run `npm run db:migrate` after deploying schema updates.
 4. Create the first administrator:
 
    ```powershell
@@ -38,6 +38,7 @@ The initial schema is intentionally fresh: previous Supabase users and records a
 - `lib/db.ts` owns the server-only PostgreSQL pool. `lib/auth.ts` uses salted scrypt password hashes and opaque, hashed session tokens stored in PostgreSQL.
 - Server actions verify the active account and role before changing data. Supervisor reads are constrained to their assigned department.
 - The `/time-in-out` kiosk accepts a student ID or keyboard-emulating RFID scan, toggles time-in/time-out, and shows the student's profile photo when available.
+- Administrators can assign RFID codes to all students; supervisors can assign codes to students in their department. Student IDs and RFID codes are unique and either identifier can be scanned at the kiosk.
 - Work earnings reduce school tuition first. A negative tuition balance represents credit owed to the student; authorized staff can transfer that credit to the personal wallet. Recorded payouts reduce the wallet balance.
 - Profile images are converted to WebP and saved on the app server. Use persistent disk for `PROFILE_UPLOAD_DIR`, especially when running the app as a Windows service.
 - Displayed dates use Philippine time (`Asia/Manila`); currency is PHP.

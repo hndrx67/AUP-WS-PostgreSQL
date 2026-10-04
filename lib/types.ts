@@ -19,6 +19,7 @@ export type Profile = {
   role: Role;
   department_id: string | null;
   student_id: string | null;
+  rfid_code: string | null;
   work_assignment: string | null;
   hourly_rate: number;
   school_tuition_balance: number;

@@ -18,23 +18,27 @@ function readTimes(fd: FormData) {
   return { time_in, time_out };
 }
 
-/** Admin override of an existing record. A reason is required and stored with the record. */
+/** Admins can edit any record; supervisors are limited to students in their department. */
 export async function overrideTimeLog(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await getSessionProfile();
-  if (!me?.is_active || me.role !== "admin") return { error: "Only active administrators can edit time records." };
+  if (!me?.is_active || (me.role !== "admin" && me.role !== "supervisor")) return { error: "Only active administrators and supervisors can edit time records." };
+  if (me.role === "supervisor" && !me.department_id) return { error: "You must be assigned to a department to edit its time records." };
   const reason = String(fd.get("reason") ?? "").trim();
   if (!reason) return { error: "Enter a reason for the override." };
   try {
     const times = readTimes(fd);
     const { rowCount } = await query(
-      "update time_logs set time_in = $2, time_out = $3, overridden_by = $4, override_reason = $5 where id = $1",
-      [String(fd.get("id") ?? ""), times.time_in, times.time_out, me.id, reason],
+      `update time_logs set time_in = $2, time_out = $3, overridden_by = $4, override_reason = $5
+        where id = $1 and ($6 = 'admin' or exists (
+          select 1 from profiles p where p.id = time_logs.student_id and p.role = 'student' and p.department_id = $7
+        ))`,
+      [String(fd.get("id") ?? ""), times.time_in, times.time_out, me.id, reason, me.role, me.department_id],
     );
-    if (!rowCount) return { error: "Time record not found." };
+    if (!rowCount) return { error: "Time record not found or outside your department." };
   } catch (e) {
     return { error: (e as Error).message };
   }
-  revalidatePath("/admin", "layout");
+  revalidatePath(me.role === "admin" ? "/admin" : "/supervisor", "layout");
   return { ok: "Record updated." };
 }
 
@@ -61,11 +65,17 @@ export async function addManualTimeLog(_prev: ActionState, fd: FormData): Promis
 
 export async function deleteTimeLog(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await getSessionProfile();
-  if (!me?.is_active || me.role !== "admin") return { error: "Only active administrators can delete time records." };
+  if (!me?.is_active || (me.role !== "admin" && me.role !== "supervisor")) return { error: "Only active administrators and supervisors can delete time records." };
+  if (me.role === "supervisor" && !me.department_id) return { error: "You must be assigned to a department to delete its time records." };
   try {
-    const result = await query("delete from time_logs where id = $1", [String(fd.get("id") ?? "")]);
-    if (!result.rowCount) return { error: "Time record not found." };
+    const result = await query(
+      `delete from time_logs where id = $1 and ($2 = 'admin' or exists (
+        select 1 from profiles p where p.id = time_logs.student_id and p.role = 'student' and p.department_id = $3
+      ))`,
+      [String(fd.get("id") ?? ""), me.role, me.department_id],
+    );
+    if (!result.rowCount) return { error: "Time record not found or outside your department." };
   } catch { return { error: "Could not delete this time record." }; }
-  revalidatePath("/admin", "layout");
+  revalidatePath(me.role === "admin" ? "/admin" : "/supervisor", "layout");
   return { ok: "Time record deleted." };
 }
