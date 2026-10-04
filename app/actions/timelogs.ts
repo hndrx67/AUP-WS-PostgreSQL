@@ -44,7 +44,8 @@ export async function overrideTimeLog(_prev: ActionState, fd: FormData): Promise
 
 export async function addManualTimeLog(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await getSessionProfile();
-  if (!me?.is_active || me.role !== "admin") return { error: "Only active administrators can add time records." };
+  if (!me?.is_active || (me.role !== "admin" && me.role !== "supervisor")) return { error: "Only active administrators and supervisors can add time records." };
+  if (me.role === "supervisor" && !me.department_id) return { error: "You must be assigned to a department to add time records." };
   const studentId = String(fd.get("student_id") ?? "");
   const reason = String(fd.get("reason") ?? "").trim();
   if (!studentId) return { error: "Choose a student." };
@@ -52,14 +53,17 @@ export async function addManualTimeLog(_prev: ActionState, fd: FormData): Promis
   try {
     const times = readTimes(fd);
     if (!times.time_out) return { error: "Enter a time out." };
-    await query(
-      "insert into time_logs (student_id, time_in, time_out, overridden_by, override_reason) values ($1, $2, $3, $4, $5)",
-      [studentId, times.time_in, times.time_out, me.id, reason],
+    const result = await query(
+      `insert into time_logs (student_id, time_in, time_out, overridden_by, override_reason)
+       select p.id, $2, $3, $4, $5 from profiles p
+       where p.id = $1 and p.role = 'student' and ($6 = 'admin' or p.department_id = $7)`,
+      [studentId, times.time_in, times.time_out, me.id, reason, me.role, me.department_id],
     );
+    if (!result.rowCount) return { error: "Student not found or outside your department." };
   } catch (e) {
     return { error: (e as Error).message };
   }
-  revalidatePath("/admin", "layout");
+  revalidatePath(me.role === "admin" ? "/admin" : "/supervisor", "layout");
   return { ok: "Entry added." };
 }
 

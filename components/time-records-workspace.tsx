@@ -18,6 +18,20 @@ import type { Profile, TimeLog } from "@/lib/types";
 type Student = Pick<Profile, "id" | "full_name" | "student_id" | "avatar_path" | "is_active">;
 type Log = TimeLog & { student_id: string };
 type View = "list" | "calendar";
+const PAGE_SIZE = 10;
+
+function Pagination({ page, pageCount, onPageChange }: { page: number; pageCount: number; onPageChange: (page: number) => void }) {
+  if (pageCount <= 1) return null;
+  return (
+    <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm">
+      <span className="text-muted-foreground">Page {page} of {pageCount}</span>
+      <div className="flex gap-2">
+        <button type="button" className="btn btn-sm btn-outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</button>
+        <button type="button" className="btn btn-sm btn-outline" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>Next</button>
+      </div>
+    </div>
+  );
+}
 
 function TimeLogEditor({ log }: { log: Log }) {
   return (
@@ -66,6 +80,7 @@ function RecordRow({ log, editable }: { log: Log; editable: boolean }) {
 function RecordsCalendar({ logs, editable }: { logs: Log[]; editable: boolean }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [selected, setSelected] = useState(() => new Date());
+  const [recordPage, setRecordPage] = useState(1);
   const days = useMemo(() => eachDayOfInterval({ start: startOfWeek(startOfMonth(month)), end: endOfWeek(endOfMonth(month)) }), [month]);
   const logsByDay = useMemo(() => {
     const map = new Map<string, Log[]>();
@@ -74,6 +89,9 @@ function RecordsCalendar({ logs, editable }: { logs: Log[]; editable: boolean })
   }, [logs]);
   const selectedKey = format(selected, "yyyy-MM-dd");
   const selectedLogs = logsByDay.get(selectedKey) ?? [];
+  const pageCount = Math.max(1, Math.ceil(selectedLogs.length / PAGE_SIZE));
+  const page = Math.min(recordPage, pageCount);
+  const visibleLogs = selectedLogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const hoursOf = (list: Log[]) => list.reduce((sum, log) => sum + logHours(log), 0);
 
   return (
@@ -110,7 +128,7 @@ function RecordsCalendar({ logs, editable }: { logs: Log[]; editable: boolean })
       <aside className="rounded-lg border border-border p-4" aria-live="polite">
         <h3 className="font-semibold">{format(selected, "EEEE, MMMM d")}</h3>
         {selectedLogs.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No records for this day.</p> : (
-          <ul className="mt-3 divide-y divide-border">{selectedLogs.map((log) => (
+          <ul className="mt-3 divide-y divide-border">{visibleLogs.map((log) => (
             <li key={log.id} className="py-2">
               <p className="text-sm">{fmtTime(log.time_in)} to {log.time_out ? fmtTime(log.time_out) : "now"}</p>
               <p className="text-xs text-muted-foreground">{log.time_out ? fmtHours(logHours(log)) : "Still clocked in"}{log.override_reason ? " · Adjusted" : ""}</p>
@@ -118,6 +136,7 @@ function RecordsCalendar({ logs, editable }: { logs: Log[]; editable: boolean })
             </li>
           ))}</ul>
         )}
+        <Pagination page={page} pageCount={pageCount} onPageChange={setRecordPage} />
       </aside>
     </div>
   );
@@ -132,7 +151,11 @@ export function TimeRecordsWorkspace({ students, selectedStudentId, logs, editab
 }) {
   const [studentLayout, setStudentLayout] = useState<"list" | "cards">("list");
   const [recordsView, setRecordsView] = useState<View>("list");
+  const [recordPage, setRecordPage] = useState(1);
   const selectedStudent = students.find((student) => student.id === selectedStudentId) ?? null;
+  const pageCount = Math.max(1, Math.ceil(logs.length / PAGE_SIZE));
+  const page = Math.min(recordPage, pageCount);
+  const visibleLogs = logs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const studentHref = (id: string) => `${basePath}?student=${encodeURIComponent(id)}`;
 
   return (
@@ -177,7 +200,10 @@ export function TimeRecordsWorkspace({ students, selectedStudentId, logs, editab
               </div>
             </div>
             {logs.length === 0 ? <Empty>No time records for this student.</Empty> : recordsView === "calendar" ? <RecordsCalendar logs={logs} editable={editable} /> : (
-              <ul className="divide-y divide-border">{logs.map((log) => <RecordRow key={log.id} log={log} editable={editable} />)}</ul>
+              <>
+                <ul className="divide-y divide-border">{visibleLogs.map((log) => <RecordRow key={log.id} log={log} editable={editable} />)}</ul>
+                <Pagination page={page} pageCount={pageCount} onPageChange={setRecordPage} />
+              </>
             )}
           </Panel>
         </div>

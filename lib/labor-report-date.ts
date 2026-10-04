@@ -14,7 +14,7 @@ export function normalizeWeekStart(value?: string) {
   const date = new Date(Date.UTC(year, month - 1, day));
   if (date.toISOString().slice(0, 10) !== source) return normalizeWeekStart(fallback);
   const weekday = date.getUTCDay();
-  date.setUTCDate(date.getUTCDate() - (weekday === 0 ? 6 : weekday - 1));
+  date.setUTCDate(date.getUTCDate() - weekday);
   return date.toISOString().slice(0, 10);
 }
 
