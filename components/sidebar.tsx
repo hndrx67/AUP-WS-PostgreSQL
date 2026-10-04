@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Building2, CalendarClock, CalendarDays, ClipboardList, Clock,
+  Building2, CalendarClock, CalendarDays, ClipboardList, Clock, FileText,
   LayoutDashboard, Radio, ReceiptText, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ import type { NavItem } from "@/lib/nav";
 
 const ICONS: Record<string, LucideIcon> = {
   Building2, CalendarClock, CalendarDays, ClipboardList, Clock,
-  LayoutDashboard, Radio, ReceiptText, Users, Wallet,
+  FileText, LayoutDashboard, Radio, ReceiptText, Users, Wallet,
 };
 
 export function Sidebar({ items, horizontal = false }: { items: NavItem[]; horizontal?: boolean }) {

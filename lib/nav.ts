@@ -17,6 +17,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/supervisor/schedules", label: "Schedules", icon: "CalendarClock" },
     { href: "/supervisor/timesheets", label: "Time records", icon: "ClipboardList" },
     { href: "/supervisor/assign-rfid", label: "Assign RFID", icon: "Radio" },
+    { href: "/supervisor/labor-report", label: "Labor Report", icon: "FileText" },
     { href: "/supervisor/department", label: "My Department", icon: "Building2" },
   ],
   admin: [
@@ -26,6 +27,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/schedules", label: "Schedules", icon: "CalendarClock" },
     { href: "/admin/timelogs", label: "Time records", icon: "ClipboardList" },
     { href: "/admin/assign-rfid", label: "Assign RFID", icon: "Radio" },
+    { href: "/admin/labor-report", label: "Labor Report", icon: "FileText" },
     { href: "/admin/payouts", label: "Finances", icon: "ReceiptText" },
   ],
 };
