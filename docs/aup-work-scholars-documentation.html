@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A self-contained technical and user guide for the AUP Work Scholars web application, including its move from Supabase to PostgreSQL.">
+  <title>AUP Work Scholars — Documentation</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080d19; --sidebar: #0c1220; --panel: #101827; --panel-2: #141f31;
+      --line: #25334a; --text: #eaf0fb; --muted: #91a0b8; --blue: #5593ff;
+      --blue-soft: #142e59; --mint: #55dfb2; --amber: #f5bd66; --red: #ff7e87;
+      --shadow: 0 20px 55px #0005; --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    [data-theme="light"] {
+      color-scheme: light; --bg: #f3f6fb; --sidebar: #fff; --panel: #fff; --panel-2: #edf3fc;
+      --line: #d8e1ef; --text: #15233a; --muted: #60718d; --blue: #286bdd;
+      --blue-soft: #e6efff; --mint: #087e5c; --amber: #93600a; --red: #c63c4d;
+      --shadow: 0 20px 55px #1a2f4b12;
+    }
+    * { box-sizing: border-box }
+    html { scroll-behavior: smooth; scroll-padding-top: 30px }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif }
+    a { color: var(--blue); text-decoration: none }
+    a:hover { text-decoration: underline }
+    button, input { font: inherit }
+    .layout { min-height: 100vh }
+    .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 5; width: 278px; padding: 24px 18px; overflow: auto; background: var(--sidebar); border-right: 1px solid var(--line) }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 2px 8px 24px; border-bottom: 1px solid var(--line) }
+    .brand-mark { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 13px; background: linear-gradient(145deg,#4d91ff,#7059e8); color: #fff; font-weight: 900; box-shadow: 0 8px 20px #437fe544 }
+    .brand b { display: block; font-size: 14px; letter-spacing: -.2px }
+    .brand small { color: var(--muted); font-size: 11px }
+    .nav-label { margin: 24px 9px 8px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase }
+    .nav { display: grid; gap: 4px }
+    .nav a { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border: 1px solid transparent; border-radius: 9px; color: var(--muted); font-size: 13px; transition: .18s ease }
+    .nav a:hover, .nav a.active { background: var(--blue-soft); border-color: #5593ff2b; color: var(--text); text-decoration: none }
+    .nav .n { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 7px; background: var(--panel-2); color: var(--blue); font-size: 11px; font-weight: 800 }
+    .side-note { margin: 22px 5px 0; padding: 13px; border: 1px solid var(--line); border-radius: 11px; color: var(--muted); font-size: 11px }
+    .side-note b { display: block; margin-bottom: 3px; color: var(--mint); font-size: 12px }
+    .main { max-width: 1500px; margin-left: 278px; padding: 28px clamp(22px,4vw,62px) 80px }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 auto 34px; max-width: 1120px }
+    .crumb { color: var(--muted); font-size: 12px }
+    .tools { display: flex; align-items: center; gap: 8px }
+    .tool { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); color: var(--text); cursor: pointer; font-size: 12px }
+    .tool:hover { border-color: var(--blue) }
+    .search-wrap { position: relative }
+    .search { width: min(240px, 32vw); height: 36px; padding: 0 11px 0 34px; border: 1px solid var(--line); border-radius: 9px; outline: none; background: var(--panel); color: var(--text); font-size: 12px }
+    .search:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #5593ff22 }
+    .search-icon { position: absolute; top: 8px; left: 11px; color: var(--muted); pointer-events: none }
+    .content { max-width: 1120px; margin: auto }
+    .hero { position: relative; isolation: isolate; overflow: hidden; min-height: 270px; padding: clamp(26px,5vw,56px); border: 1px solid #4078cf55; border-radius: 22px; background: radial-gradient(ellipse at 92% 6%,#3782ff33,transparent 40%), radial-gradient(ellipse at 5% 100%,#4c58d527,transparent 42%), var(--panel); box-shadow: var(--shadow) }
+    .hero:after { position: absolute; z-index: -1; right: -42px; bottom: -160px; width: 430px; height: 430px; border: 1px solid #77aaff18; border-radius: 50%; box-shadow: 0 0 0 32px #77aaff08,0 0 0 66px #77aaff06; content: "" }
+    .eyebrow { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 14px; color: var(--mint); font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase }
+    .eyebrow:before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 14px currentColor; content: "" }
+    h1,h2,h3,h4,p { margin-top: 0 }
+    h1 { max-width: 720px; margin-bottom: 12px; font-size: clamp(34px,5vw,54px); line-height: 1.08; letter-spacing: -2.2px }
+    .hero p { max-width: 690px; margin-bottom: 22px; color: var(--muted); font-size: 16px }
+    .hero-pills { display: flex; flex-wrap: wrap; gap: 8px }
+    .pill,.tag { display: inline-flex; align-items: center; padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); color: var(--muted); font-size: 11px; font-weight: 650 }
+    .hero .pill { color: var(--text) }
+    .stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 15px 0 50px }
+    .stat { padding: 15px 17px; border: 1px solid var(--line); border-radius: 13px; background: var(--panel) }
+    .stat b { display: block; margin-bottom: 2px; font-size: 22px; letter-spacing: -.6px }
+    .stat span { color: var(--muted); font-size: 11px }
+    section { margin-top: 54px; scroll-margin-top: 24px }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 19px }
+    .section-head h2 { margin-bottom: 3px; font-size: 26px; letter-spacing: -.7px }
+    .section-head p { max-width: 640px; margin: 0; color: var(--muted); font-size: 13px }
+    .section-index { color: var(--blue); font: 700 11px var(--mono); letter-spacing: 1px }
+    .grid { display: grid; gap: 14px }
+    .grid.two { grid-template-columns: repeat(2,minmax(0,1fr)) }
+    .grid.three { grid-template-columns: repeat(3,minmax(0,1fr)) }
+    .card { min-width: 0; padding: 19px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel) }
+    .card h3 { margin: 0 0 7px; font-size: 15px; letter-spacing: -.15px }
+    .card p { margin-bottom: 0; color: var(--muted); font-size: 13px }
+    .icon { display: grid; width: 35px; height: 35px; place-items: center; margin-bottom: 13px; border: 1px solid #5593ff2a; border-radius: 10px; background: var(--blue-soft); color: var(--blue); font-size: 15px; font-weight: 800 }
+    .role-card { position: relative; overflow: hidden }
+    .role-card:after { position:absolute; top:-37px; right:-34px; width:100px; height:100px; border:1px solid var(--line); border-radius:50%; box-shadow:0 0 0 12px color-mix(in srgb,var(--line),transparent 65%); content:"" }
+    .role-card .tag { margin-bottom: 11px }
+    .role-card ul,.clean-list { margin: 12px 0 0; padding-left: 19px; color: var(--muted); font-size: 12px }
+    li+li { margin-top: 5px }
+    .diagram-card { overflow-x: auto; padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel) }
+    .diagram-card svg { display: block; width: 100%; min-width: 700px; height: auto }
+    .diagram-card .node { fill: var(--panel-2); stroke: var(--line); stroke-width: 1.3 }
+    .diagram-card .node-blue { fill: var(--blue-soft); stroke: #5593ff75 }
+    .diagram-card .node-green { fill: color-mix(in srgb,var(--mint),transparent 89%); stroke: color-mix(in srgb,var(--mint),transparent 40%) }
+    .diagram-card .node-warn { fill: color-mix(in srgb,var(--amber),transparent 89%); stroke: color-mix(in srgb,var(--amber),transparent 40%) }
+    .diagram-card .edge { fill: none; stroke: #6881a7; stroke-width: 1.4 }
+    .diagram-card .edge-dash { stroke-dasharray: 5 5 }
+    .diagram-card text { fill: var(--text); font-family: Inter,ui-sans-serif,system-ui,sans-serif }
+    .diagram-card .sub { fill: var(--muted); font-size: 11px }
+    .diagram-card .label { font-size: 13px; font-weight: 700 }
+    .diagram-card .tiny { fill: var(--muted); font-size: 9px }
+    .caption { margin: 10px 3px 0; color: var(--muted); font-size: 11px }
+    .callout { display: flex; gap: 12px; align-items: flex-start; margin: 16px 0; padding: 14px 16px; border: 1px solid #5593ff38; border-radius: 12px; background: var(--blue-soft); color: var(--text); font-size: 12px }
+    .callout strong { color: var(--blue) }
+    .callout.warn { border-color: #f5bd6638; background: color-mix(in srgb,var(--amber),transparent 91%) }
+    .callout.warn strong { color: var(--amber) }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 13px; background: var(--panel) }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px }
+    th,td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top }
+    th { background: var(--panel-2); color: var(--muted); font-size: 10px; letter-spacing: .8px; text-transform: uppercase }
+    tr:last-child td { border-bottom: 0 }
+    td b { color: var(--text) }
+    td { color: var(--muted) }
+    code,.code { padding: 2px 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); color: var(--mint); font: 11px var(--mono); overflow-wrap: anywhere }
+    pre { position: relative; overflow: auto; margin: 12px 0; padding: 17px; border: 1px solid var(--line); border-radius: 11px; background: #080d17; color: #d9e5f7; font: 12px/1.65 var(--mono); tab-size: 2 }
+    [data-theme="light"] pre { background: #101a2a; color: #eaf0fb }
+    .copy { position: absolute; top: 8px; right: 8px; padding: 5px 8px; border: 1px solid #ffffff25; border-radius: 6px; background: #ffffff10; color: #dce8fb; cursor: pointer; font-size: 10px }
+    .copy:hover { background: #ffffff20 }
+    .steps { display: grid; gap: 0; counter-reset: steps }
+    .step { position: relative; display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 0 0 22px; counter-increment: steps }
+    .step:before { display:grid; width:32px; height:32px; place-items:center; border:1px solid #5593ff55; border-radius:10px; background:var(--blue-soft); color:var(--blue); font-size:12px; font-weight:800; content:counter(steps,decimal-leading-zero) }
+    .step:not(:last-child):after { position:absolute; top:36px; bottom:0; left:15px; width:1px; background:var(--line); content:"" }
+    .step h3 { margin: 2px 0 5px; font-size: 14px }
+    .step p { margin:0; color:var(--muted); font-size:12px }
+    .route { display:inline-block; min-width:130px; color:var(--blue); font:12px var(--mono) }
+    .route-row { display:flex; align-items:baseline; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); font-size:12px }
+    .route-row:last-child { border-bottom:0 }
+    .route-row span:last-child { color:var(--muted) }
+    .glossary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 22px }
+    .term { display:grid; grid-template-columns:150px 1fr; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); font-size:12px }
+    .term b { color:var(--text) }
+    .term span { color:var(--muted) }
+    .footer { display:flex; justify-content:space-between; gap:16px; margin-top:60px; padding:19px 0 0; border-top:1px solid var(--line); color:var(--muted); font-size:11px }
+    .hidden-search { display:none!important }
+    .menu-toggle { display:none }
+    @media (max-width: 1050px) { .sidebar { width:235px } .main { margin-left:235px; padding-inline:25px } .grid.three { grid-template-columns:repeat(2,minmax(0,1fr)) } }
+    @media (max-width: 760px) { .sidebar { transform:translateX(-102%); width:min(300px,86vw); transition:transform .2s ease; box-shadow:var(--shadow) } .sidebar.open { transform:translateX(0) } .main { margin-left:0; padding:15px 16px 60px } .menu-toggle { display:inline-flex } .topbar { margin-bottom:20px } .crumb { display:none } .search { width:min(190px,42vw) } .hero { min-height:230px; border-radius:16px } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:38px } .grid.two,.grid.three { grid-template-columns:1fr } .glossary { grid-template-columns:1fr } .term { grid-template-columns:120px 1fr } .section-head { align-items:start } }
+    @media print { :root,[data-theme="light"] { color-scheme:light; --bg:#fff; --sidebar:#fff; --panel:#fff; --panel-2:#f4f6f8; --line:#d6dbe3; --text:#101827; --muted:#45536a; --blue:#195dbd; --blue-soft:#edf3ff; --mint:#087e5c; --amber:#805507; --shadow:none } .sidebar,.topbar,.copy { display:none!important } .main { max-width:none; margin:0; padding:0 } .content { max-width:none } .hero,.card,.diagram-card,.table-wrap { break-inside:avoid; box-shadow:none } section { break-inside:avoid-page; margin-top:32px } .diagram-card svg { min-width:0 } a { color:inherit } }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar" aria-label="Documentation navigation">
+      <div class="brand"><div class="brand-mark">A</div><div><b>AUP Work Scholars</b><small>Product & engineering guide</small></div></div>
+      <div class="nav-label">On this page</div>
+      <nav class="nav" id="nav">
+        <a href="#overview" class="active"><span class="n">01</span>Overview</a>
+        <a href="#architecture"><span class="n">02</span>System architecture</a>
+        <a href="#roles"><span class="n">03</span>Roles & capabilities</a>
+        <a href="#workflows"><span class="n">04</span>Core workflows</a>
+        <a href="#data-model"><span class="n">05</span>Database model</a>
+        <a href="#finance"><span class="n">06</span>Financial rules</a>
+        <a href="#postgres-move"><span class="n">07</span>Supabase → PostgreSQL</a>
+        <a href="#setup"><span class="n">08</span>Windows setup</a>
+        <a href="#security"><span class="n">09</span>Security & operations</a>
+        <a href="#routes"><span class="n">10</span>Route reference</a>
+        <a href="#glossary"><span class="n">11</span>Glossary</a>
+      </nav>
+      <div class="side-note"><b>Self-hosted database</b>PostgreSQL is local to the web server. Cloudflare Tunnel exposes the web app only; do not publish port 5432.</div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="crumb">Documentation <span aria-hidden="true">/</span> AUP Work Scholars</div>
+        <div class="tools">
+          <button class="tool menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button>
+          <label class="search-wrap"><span class="search-icon" aria-hidden="true">⌕</span><input class="search" id="search" type="search" placeholder="Search this guide…" aria-label="Search documentation"></label>
+          <button class="tool" id="themeToggle" title="Toggle color theme">◐ <span class="theme-text">Theme</span></button>
+          <button class="tool" id="printButton" title="Print or save as PDF">⇩ <span class="print-text">Print / PDF</span></button>
+        </div>
+      </div>
+
+      <div class="content">
+        <header class="hero" id="overview">
+          <div class="eyebrow">Application documentation · 2026</div>
+          <h1>Work. Record.<br>Balance.</h1>
+          <p>A guide to the AUP Work Scholars web app: how users clock time, how earnings are applied, how the application is structured, and how its database and sign-in moved from Supabase to self-hosted PostgreSQL.</p>
+          <div class="hero-pills"><span class="pill">Next.js 15</span><span class="pill">React 19</span><span class="pill">TypeScript</span><span class="pill">PostgreSQL</span><span class="pill">Windows host</span></div>
+        </header>
+
+        <div class="stats" aria-label="At a glance">
+          <div class="stat"><b>3</b><span>account roles</span></div>
+          <div class="stat"><b>7</b><span>core PostgreSQL tables</span></div>
+          <div class="stat"><b>7 days</b><span>session lifetime</span></div>
+          <div class="stat"><b>WebP</b><span>server-stored profile photos</span></div>
+        </div>
+
+        <section id="architecture" data-search="architecture next.js postgres server actions browser">
+          <div class="section-head"><div><div class="section-index">01 / UNDER THE HOOD</div><h2>System architecture</h2><p>Browser UI talks to Next.js. PostgreSQL is reached only from server code using a pooled connection.</p></div></div>
+          <div class="diagram-card">
+            <svg viewBox="0 0 930 350" role="img" aria-labelledby="arch-title arch-desc">
+              <title id="arch-title">AUP Work Scholars system architecture</title><desc id="arch-desc">Users connect to Next.js pages and server actions, which use authentication, PostgreSQL, and local file storage. Cloudflare Tunnel connects to the web app and PostgreSQL remains private.</desc>
+              <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#6881a7"/></marker></defs>
+              <path class="edge" marker-end="url(#arr)" d="M190 152H270"/><path class="edge" marker-end="url(#arr)" d="M465 125H548"/><path class="edge" marker-end="url(#arr)" d="M465 198H548"/><path class="edge" marker-end="url(#arr)" d="M700 125H770"/><path class="edge" marker-end="url(#arr)" d="M700 205H770"/>
+              <path class="edge edge-dash" marker-end="url(#arr)" d="M108 213V286H352V224"/><text x="204" y="278" class="tiny">HTTPS over Cloudflare Tunnel</text>
+              <rect class="node node-blue" x="30" y="105" width="160" height="108" rx="14"/><text x="51" y="139" class="label">People & devices</text><text x="51" y="163" class="sub">Students · supervisors</text><text x="51" y="181" class="sub">Admins · RFID kiosk</text>
+              <rect class="node" x="270" y="92" width="195" height="145" rx="14"/><text x="292" y="124" class="label">Next.js application</text><text x="292" y="148" class="sub">App Router pages</text><text x="292" y="168" class="sub">Server actions & routes</text><text x="292" y="188" class="sub">Role and scope checks</text><text x="292" y="214" class="tiny">Not exposed to browser: DB secrets</text>
+              <rect class="node node-green" x="548" y="75" width="152" height="100" rx="14"/><text x="569" y="109" class="label">PostgreSQL</text><text x="569" y="133" class="sub">Profiles & sessions</text><text x="569" y="151" class="sub">Time & finance records</text>
+              <rect class="node node-warn" x="548" y="190" width="152" height="87" rx="14"/><text x="569" y="222" class="label">App file storage</text><text x="569" y="246" class="sub">WebP profile images</text><text x="569" y="263" class="tiny">Persistent local directory</text>
+              <rect class="node" x="770" y="85" width="132" height="78" rx="14"/><text x="790" y="117" class="label">DB pool</text><text x="790" y="139" class="sub">lib/db.ts · pg</text>
+              <rect class="node" x="770" y="195" width="132" height="78" rx="14"/><text x="790" y="227" class="label">Image handler</text><text x="790" y="249" class="sub">Protected kiosk URL</text>
+              <rect x="30" y="294" width="872" height="33" rx="9" fill="none" stroke="#ff7e8740" stroke-dasharray="4 5"/><text x="53" y="315" class="sub">Network boundary · keep PostgreSQL on localhost / private LAN. Tunnel traffic should terminate at the web server only.</text>
+            </svg>
+          </div>
+          <p class="caption">Database calls and authorization checks run on the server. Server-rendered list pages use a PostgreSQL query helper; actions use parameterized SQL and transactions. Do not put the connection string in any <code>NEXT_PUBLIC_*</code> variable.</p>
+          <div class="grid three" style="margin-top:14px">
+            <article class="card"><h3>App pages & actions</h3><p><code>app/(app)/</code> contains role-based screens. <code>app/actions/</code> contains sign-in, profile, time, schedule, department, user, kiosk, and finance operations.</p></article>
+            <article class="card"><h3>Server libraries</h3><p><code>lib/db.ts</code> connection pool and transactions · <code>lib/auth.ts</code> sessions and role gates · <code>lib/postgres-client.ts</code> page-read helper · <code>lib/finance.ts</code> balance calculations.</p></article>
+            <article class="card"><h3>Database & scripts</h3><p><code>database/schema.sql</code> initial schema · <code>scripts/migrate.mjs</code> schema runner · <code>scripts/create-admin.mjs</code> first administrator bootstrap.</p></article>
+          </div>
+        </section>
+
+        <section id="roles" data-search="roles permissions student work scholar supervisor administrator admin">
+          <div class="section-head"><div><div class="section-index">02 / WHO USES IT</div><h2>Roles & capabilities</h2><p>Users sign in with an assigned email and password. Administrators create accounts; public self-registration is not used.</p></div></div>
+          <div class="grid three">
+            <article class="card role-card"><span class="tag">WORK SCHOLAR · STUDENT</span><h3>Work and track earnings</h3><p>Students see information tied to their account and assigned department.</p><ul><li>Clock in/out and view time records</li><li>Review tuition balance and personal wallet</li><li>See shifts, earnings, and withdrawal history</li><li>Edit profile, upload photos, change password</li></ul></article>
+            <article class="card role-card"><span class="tag">SUPERVISOR</span><h3>Manage a department</h3><p>Supervisors operate within their assigned department.</p><ul><li>Create and maintain department student accounts</li><li>Disable a student; edit ID, work assignment and rate</li><li>Set shifts and review department time logs</li><li>Manage tuition credit and record withdrawals</li></ul></article>
+            <article class="card role-card"><span class="tag">ADMINISTRATOR</span><h3>Manage the whole system</h3><p>Administrators have app-wide account and finance controls.</p><ul><li>Create departments and all account roles</li><li>Assign users, set rates, change credentials</li><li>Correct time entries and manage schedules</li><li>Set balances, transfer credit, record payouts</li><li>Deactivate or permanently delete accounts</li></ul></article>
+          </div>
+          <div class="callout"><span>ⓘ</span><div><strong>Department boundary:</strong> supervisor reads and financial actions are restricted to students in the supervisor’s department. Students should only access their own private records.</div></div>
+        </section>
+
+        <section id="workflows" data-search="workflows clock kiosk rfid time in out profile schedule toast notifications">
+          <div class="section-head"><div><div class="section-index">03 / DAILY USE</div><h2>Core workflows</h2><p>The main user journeys from entry to recorded work and the resulting financial balance.</p></div></div>
+          <div class="grid two">
+            <article class="card"><div class="icon">◷</div><h3>Time-in / time-out kiosk</h3><p>The kiosk accepts a student number typed into the field or entered by a keyboard-emulating RFID reader. A successful scan looks up an active student and toggles their state: an open time record closes; otherwise a new record opens. A unique partial index prevents two open records for one student.</p></article>
+            <article class="card"><div class="icon">▣</div><h3>Photo display & storage</h3><p>Profile and cover images are processed to WebP and written to <code>PROFILE_UPLOAD_DIR</code> on the web server, not to the database. The kiosk gets a short-lived signed URL for the student’s avatar; without an upload, it displays the default avatar.</p></article>
+            <article class="card"><div class="icon">▤</div><h3>Schedules and records</h3><p>Administrators and supervisors maintain weekly student shifts. Students see their calendar and recent time entries; supervisors see department activity; administrators can add, edit, or remove time records with a reason attached to manual corrections.</p></article>
+            <article class="card"><div class="icon">✦</div><h3>Feedback and profiles</h3><p>App actions report success and errors using bottom-right toast notifications. Account profile details are editable; profile and cover pictures are server-side WebP files. Students and supervisors can change their password, while an administrator can override account credentials.</p></article>
+          </div>
+        </section>
+
+        <section id="data-model" data-search="database model erd schema tables profiles departments sessions time logs schedules payouts wallet transfers">
+          <div class="section-head"><div><div class="section-index">04 / DATA STRUCTURE</div><h2>PostgreSQL data model</h2><p>The fresh schema is in <code>database/schema.sql</code>. This entity map shows its main relationships.</p></div></div>
+          <div class="diagram-card">
+            <svg viewBox="0 0 950 478" role="img" aria-labelledby="erd-title erd-desc">
+              <title id="erd-title">PostgreSQL entity relationship diagram</title><desc id="erd-desc">Departments relate to profiles, which relate to sessions, time logs, schedules, payouts and wallet transfers.</desc>
+              <defs><marker id="relarr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#6881a7"/></marker></defs>
+              <path class="edge" marker-end="url(#relarr)" d="M221 118H317"/><text x="253" y="108" class="tiny">department_id</text>
+              <path class="edge" marker-end="url(#relarr)" d="M475 114H598V64H665"/><path class="edge" marker-end="url(#relarr)" d="M475 140H598V164H665"/><path class="edge" marker-end="url(#relarr)" d="M475 163H598V264H665"/><path class="edge" marker-end="url(#relarr)" d="M475 187H598V364H665"/><path class="edge" marker-end="url(#relarr)" d="M475 210H598V444H665"/>
+              <text x="495" y="105" class="tiny">profile_id</text><text x="503" y="154" class="tiny">student_id</text><text x="503" y="254" class="tiny">student_id</text><text x="503" y="354" class="tiny">student_id</text><text x="503" y="434" class="tiny">student_id</text>
+              <rect class="node node-blue" x="35" y="64" width="186" height="123" rx="12"/><text x="52" y="90" class="label">departments</text><text x="52" y="113" class="sub">PK id · uuid</text><text x="52" y="132" class="sub">name · description</text><text x="52" y="158" class="tiny">one department → many profiles</text>
+              <rect class="node node-blue" x="317" y="58" width="158" height="190" rx="12"/><text x="336" y="84" class="label">profiles</text><text x="336" y="107" class="sub">PK id · email · role</text><text x="336" y="126" class="sub">password_hash · active</text><text x="336" y="145" class="sub">department_id · student_id</text><text x="336" y="164" class="sub">hourly_rate · tuition</text><text x="336" y="183" class="sub">personal wallet opening</text><text x="336" y="214" class="tiny">central account record</text>
+              <rect class="node" x="665" y="32" width="245" height="70" rx="11"/><text x="683" y="58" class="label">sessions</text><text x="683" y="80" class="sub">profile_id · token_hash · expires_at</text>
+              <rect class="node" x="665" y="132" width="245" height="88" rx="11"/><text x="683" y="158" class="label">time_logs</text><text x="683" y="180" class="sub">student_id · time_in · time_out</text><text x="683" y="199" class="tiny">earning_rate · override_reason</text>
+              <rect class="node" x="665" y="232" width="245" height="70" rx="11"/><text x="683" y="258" class="label">schedules</text><text x="683" y="280" class="sub">student_id · day · start / end</text>
+              <rect class="node node-green" x="665" y="332" width="245" height="70" rx="11"/><text x="683" y="358" class="label">payouts</text><text x="683" y="380" class="sub">student_id · amount · paid_at</text>
+              <rect class="node node-green" x="665" y="412" width="245" height="60" rx="11"/><text x="683" y="438" class="label">wallet_transfers</text><text x="683" y="458" class="sub">student_id · amount · allocated_at</text>
+            </svg>
+          </div>
+          <div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Table</th><th>What it stores</th><th>Integrity rules</th></tr></thead><tbody>
+            <tr><td><b>profiles</b></td><td>Login identity, user role, department, rates, profile fields, and current financial baseline.</td><td>Email unique; student ID unique when present; role limited to student, supervisor, admin.</td></tr>
+            <tr><td><b>sessions</b></td><td>Opaque login session hashes and expiry timestamps.</td><td>Token hashes unique; deleting a profile cascades its sessions.</td></tr>
+            <tr><td><b>time_logs</b></td><td>Clock-in/out times, captured earning rate, and administrative correction notes.</td><td>Only one open record per student; time out cannot precede time in.</td></tr>
+            <tr><td><b>schedules</b></td><td>Recurring weekday work shifts and labels.</td><td>Weekday range is 0–6; end time must follow start time.</td></tr>
+            <tr><td><b>payouts</b></td><td>Withdrawals from the student’s personal wallet.</td><td>Amount must be positive; actor is retained in <code>created_by</code>.</td></tr>
+            <tr><td><b>wallet_transfers</b></td><td>Tuition credit allocations into a student’s personal wallet.</td><td>Amount must be positive; actor and time are recorded.</td></tr>
+          </tbody></table></div>
+        </section>
+
+        <section id="finance" data-search="finance tuition balance earnings negative credit personal wallet allocation payout withdrawal">
+          <div class="section-head"><div><div class="section-index">05 / MONEY FLOW</div><h2>Financial rules</h2><p>Work earnings first reduce the school tuition balance. Tuition credit can then be moved to a withdrawable wallet.</p></div></div>
+          <div class="diagram-card">
+            <svg viewBox="0 0 920 235" role="img" aria-labelledby="money-title money-desc">
+              <title id="money-title">Student earnings allocation flow</title><desc id="money-desc">Recorded work earnings reduce tuition owed. Once tuition is paid, excess earnings are tuition credit. Staff allocate credit to a personal wallet, then record a payout to withdraw it.</desc>
+              <defs><marker id="moneyarr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#6881a7"/></marker></defs>
+              <path class="edge" marker-end="url(#moneyarr)" d="M183 110H236"/><path class="edge" marker-end="url(#moneyarr)" d="M410 110H463"/><path class="edge" marker-end="url(#moneyarr)" d="M640 110H693"/>
+              <rect class="node node-blue" x="20" y="69" width="163" height="83" rx="13"/><text x="42" y="99" class="label">Work completed</text><text x="42" y="123" class="sub">hours × captured rate</text>
+              <rect class="node" x="236" y="69" width="174" height="83" rx="13"/><text x="258" y="99" class="label">School tuition</text><text x="258" y="123" class="sub">owed balance goes down</text>
+              <rect class="node node-warn" x="463" y="69" width="177" height="83" rx="13"/><text x="485" y="99" class="label">Tuition credit</text><text x="485" y="123" class="sub">negative owed balance</text>
+              <rect class="node node-green" x="693" y="69" width="207" height="83" rx="13"/><text x="715" y="99" class="label">Personal wallet</text><text x="715" y="123" class="sub">allocation − withdrawals</text>
+              <text x="184" y="95" class="tiny">automatic</text><text x="411" y="95" class="tiny">if earnings exceed owed</text><text x="641" y="95" class="tiny">staff action</text>
+              <text x="257" y="194" class="sub">Admin / supervisor records payout</text><path class="edge edge-dash" marker-end="url(#moneyarr)" d="M470 190H691"/><text x="489" y="181" class="tiny">cash withdrawal from wallet</text>
+            </svg>
+          </div>
+          <div class="grid two" style="margin-top:14px">
+            <article class="card"><h3>Tuition balance</h3><p><code>set tuition balance − eligible earnings + credit already transferred</code>. Eligible earnings come from completed time logs since <code>financials_started_at</code>. A negative result is credit owed by AUP to the student.</p></article>
+            <article class="card"><h3>Personal wallet</h3><p><code>opening wallet + all wallet transfers − all payouts</code>. Allocation and withdrawal actions run in a PostgreSQL transaction and lock the student row before validating available funds.</p></article>
+          </div>
+          <div class="callout warn"><span>!</span><div><strong>Example:</strong> A student starts with ₱1,000 tuition owed and earns ₱1,250 after the balance is set. The tuition balance is −₱250, meaning ₱250 credit. A manager can allocate up to ₱250 to the personal wallet; any later withdrawal is recorded as a payout.</div></div>
+        </section>
+
+        <section id="postgres-move" data-search="supabase migration postgres transition auth rls rpc postgrest fresh database">
+          <div class="section-head"><div><div class="section-index">06 / PLATFORM CHANGE</div><h2>Supabase → PostgreSQL</h2><p>This is a full replacement of the database and authentication service—not just a change of connection string.</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Concern</th><th>Previous Supabase approach</th><th>Current PostgreSQL approach</th></tr></thead><tbody>
+            <tr><td><b>Database access</b></td><td>Supabase client API / PostgREST and Supabase RPC functions.</td><td>Server-only <code>pg</code> connection pool in <code>lib/db.ts</code>; parameterized SQL from server code.</td></tr>
+            <tr><td><b>Authentication</b></td><td>Supabase Auth users and access tokens.</td><td>App-owned account password hashes using Node scrypt; sessions stored in the PostgreSQL <code>sessions</code> table.</td></tr>
+            <tr><td><b>Authorization</b></td><td>Supabase Auth context and database RLS policies.</td><td>Next.js server action/page role checks and department scoping in server queries. PostgreSQL is not exposed to browsers.</td></tr>
+            <tr><td><b>Database functions</b></td><td>RPC calls for functions such as kiosk toggling.</td><td>Parameterized SQL and explicit transaction handling in application server actions.</td></tr>
+            <tr><td><b>Profile images</b></td><td>Previously relied on Supabase storage integration.</td><td>WebP image files on the application server; PostgreSQL stores their file names.</td></tr>
+            <tr><td><b>Schema setup</b></td><td>Supabase SQL files / dashboard migrations.</td><td><code>database/schema.sql</code>, applied with <code>npm run db:migrate</code> and tracked in <code>schema_migrations</code>.</td></tr>
+          </tbody></table></div>
+          <div class="diagram-card" style="margin-top:15px">
+            <svg viewBox="0 0 920 230" role="img" aria-labelledby="migration-title migration-desc">
+              <title id="migration-title">Application platform transition</title><desc id="migration-desc">Former browser and Next application used Supabase authentication and Supabase PostgREST, RLS, RPC, and storage. Current app authenticates with app-managed password hashes and sessions and connects through Node pg to self-hosted PostgreSQL, while profile photos use server disk.</desc>
+              <defs><marker id="migarr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#6881a7"/></marker></defs>
+              <text x="31" y="27" class="tiny">BEFORE</text><text x="510" y="27" class="tiny">NOW</text>
+              <rect class="node" x="25" y="44" width="390" height="154" rx="14"/><text x="45" y="72" class="label">Supabase-hosted platform</text>
+              <rect class="node node-warn" x="48" y="94" width="153" height="69" rx="10"/><text x="65" y="121" class="label">Supabase Auth</text><text x="65" y="143" class="sub">users / tokens</text>
+              <rect class="node node-warn" x="225" y="94" width="166" height="69" rx="10"/><text x="242" y="121" class="label">Supabase DB API</text><text x="242" y="143" class="sub">PostgREST · RLS · RPC</text>
+              <path class="edge edge-dash" marker-end="url(#migarr)" d="M430 120H490"/><text x="435" y="108" class="tiny">full app replacement</text>
+              <rect class="node node-green" x="510" y="44" width="385" height="154" rx="14"/><text x="530" y="72" class="label">Self-hosted app + PostgreSQL</text>
+              <rect class="node node-blue" x="533" y="94" width="153" height="69" rx="10"/><text x="550" y="121" class="label">App authentication</text><text x="550" y="143" class="sub">scrypt · DB sessions</text>
+              <rect class="node node-green" x="710" y="94" width="160" height="69" rx="10"/><text x="727" y="121" class="label">PostgreSQL</text><text x="727" y="143" class="sub">direct server SQL</text>
+            </svg>
+          </div>
+          <div class="callout warn"><span>!</span><div><strong>Fresh start by design:</strong> existing Supabase users, passwords, records, and storage are not automatically copied. The new database starts empty; create the first administrator with <code>npm run create-admin</code>. Keep a separate backup of old data if it may be needed.</div></div>
+        </section>
+
+        <section id="setup" data-search="setup windows install database role password migrations env local pgadmin psql admin">
+          <div class="section-head"><div><div class="section-index">07 / FIRST-TIME DEPLOYMENT</div><h2>Windows setup</h2><p>PostgreSQL stays on the Windows host. The app connects over loopback; the tunnel points only to Next.js.</p></div></div>
+          <div class="steps">
+            <div class="step"><div><h3>Install PostgreSQL</h3><p>Install PostgreSQL for Windows. Use pgAdmin 4 or the bundled <code>psql</code> command line to create and inspect the database.</p></div></div>
+            <div class="step"><div><h3>Create an app role and a fresh database</h3><p>Connect as the PostgreSQL administrator. Pick a long password and use the same password in <code>DATABASE_URL</code>.</p><pre><button class="copy" type="button">Copy</button>CREATE ROLE aupws_app LOGIN PASSWORD 'replace-with-a-strong-password';
+CREATE DATABASE aup_work_scholars OWNER aupws_app;</pre></div></div>
+            <div class="step"><div><h3>Configure the app connection</h3><p>Copy <code>.env.example</code> to <code>.env.local</code>, then set the database login and a random <code>SESSION_SECRET</code> (at least 32 bytes). Local connection format:</p><pre><button class="copy" type="button">Copy</button>DATABASE_URL=postgresql://aupws_app:YOUR_PASSWORD@127.0.0.1:5432/aup_work_scholars
+SESSION_SECRET=use-a-random-secret-of-at-least-32-bytes
+DB_POOL_MAX=10
+PROFILE_UPLOAD_DIR=./data/profile-uploads</pre><p>If a database password includes URL-reserved characters, percent-encode it in the connection URL. Keep <code>.env.local</code> private and out of source control.</p></div></div>
+            <div class="step"><div><h3>Install packages and apply the schema</h3><p>Run from the project directory. The migration command is safe to repeat after the complete initial schema has been applied; it rejects partial schemas for inspection.</p><pre><button class="copy" type="button">Copy</button>npm install
+npm run db:migrate</pre></div></div>
+            <div class="step"><div><h3>Create the first administrator</h3><p>This prompts for a name, email, and password (minimum 12 characters). Additional accounts are created in the admin or supervisor UI.</p><pre><button class="copy" type="button">Copy</button>npm run create-admin</pre></div></div>
+            <div class="step"><div><h3>Run the web app</h3><pre><button class="copy" type="button">Copy</button># Development
+npm run dev
+
+# Production
+npm run build
+npm start</pre><p>For a Cloudflare Tunnel, route to the Next.js service (for example, localhost port 3000). Do not route the PostgreSQL port 5432 through the tunnel.</p></div></div>
+          </div>
+          <div class="callout"><span>✓</span><div><strong>Migration file:</strong> <code>database/schema.sql</code>. The runner is <code>scripts/migrate.mjs</code>; it applies the schema in a transaction and stores the initial version in <code>schema_migrations</code>.</div></div>
+        </section>
+
+        <section id="security" data-search="security authorization sessions password scrypt cookie database backup network secrets uploads">
+          <div class="section-head"><div><div class="section-index">08 / RUN IT SAFELY</div><h2>Security & operations</h2><p>With Supabase removed, the app server owns identity checks and the PostgreSQL connection. Protect both the app host and its secrets.</p></div></div>
+          <div class="grid two">
+            <article class="card"><h3>Authentication and sessions</h3><ul class="clean-list"><li>Password hashes use salted scrypt; passwords are not stored in plaintext.</li><li>Browser cookie is HttpOnly, SameSite=Lax, and Secure in production.</li><li>The random cookie token is stored as a SHA-256 hash in PostgreSQL.</li><li>Sessions expire after seven days; sign out removes the current session.</li><li>Password changes revoke other sessions for that account.</li></ul></article>
+            <article class="card"><h3>Database boundary</h3><ul class="clean-list"><li>Only server code imports the PostgreSQL pool.</li><li>Use parameterized SQL for values; never send DB credentials to the browser.</li><li>Keep PostgreSQL bound to localhost/private network.</li><li>Do not publish TCP 5432 in Cloudflare Tunnel or router firewall.</li><li>Supervisors’ department ownership is checked in server actions and scoped reads.</li></ul></article>
+            <article class="card"><h3>Backups and durability</h3><ul class="clean-list"><li>Back up PostgreSQL regularly with <code>pg_dump</code>.</li><li>Back up <code>PROFILE_UPLOAD_DIR</code> separately; photos are files, not DB blobs.</li><li>Use persistent storage if the Next app runs as a service or in a container.</li><li>Practice restoring both a database dump and the photo directory.</li></ul></article>
+            <article class="card"><h3>Operational values</h3><ul class="clean-list"><li><code>DATABASE_URL</code> — server-side connection string.</li><li><code>SESSION_SECRET</code> — signs short-lived kiosk image URLs.</li><li><code>DB_POOL_MAX</code> — maximum pooled connections (default 10).</li><li><code>PROFILE_UPLOAD_DIR</code> — image directory (default <code>data/profile-uploads</code>).</li><li>UI date formatting uses <code>Asia/Manila</code>; currency is PHP.</li></ul></article>
+          </div>
+          <div class="callout warn"><span>!</span><div><strong>RLS changed:</strong> PostgreSQL is accessed by the app’s database role, not a browser Supabase client. Do not grant browser code database credentials. Maintain authorization checks on server actions and server reads whenever adding a new feature.</div></div>
+        </section>
+
+        <section id="routes" data-search="route reference urls pages admin supervisor student kiosk profile login">
+          <div class="section-head"><div><div class="section-index">09 / APP MAP</div><h2>Route reference</h2><p>Protected areas require a matching active account role. The kiosk is a shared, public-facing screen.</p></div></div>
+          <div class="grid two">
+            <article class="card"><h3>Shared routes</h3>
+              <div class="route-row"><span class="route">/</span><span>Landing page</span></div>
+              <div class="route-row"><span class="route">/login</span><span>Assigned account sign-in</span></div>
+              <div class="route-row"><span class="route">/time-in-out</span><span>Student ID / RFID time kiosk</span></div>
+              <div class="route-row"><span class="route">/profile</span><span>Current user profile settings</span></div>
+              <div class="route-row"><span class="route">/profile/[userId]</span><span>Public-in-app member profile</span></div>
+            </article>
+            <article class="card"><h3>Role areas</h3>
+              <div class="route-row"><span class="route">/student</span><span>Overview, schedule, department, earnings, timesheet</span></div>
+              <div class="route-row"><span class="route">/supervisor</span><span>Overview, students, finances, schedules, department, timesheets</span></div>
+              <div class="route-row"><span class="route">/admin</span><span>Overview, users, departments, payouts, schedules, time records</span></div>
+              <div class="route-row"><span class="route">/account-disabled</span><span>Disabled student account notice</span></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="glossary" data-search="glossary definition balance credit wallet session role department rfid">
+          <div class="section-head"><div><div class="section-index">10 / QUICK REFERENCE</div><h2>Glossary</h2><p>Terms used throughout the application and this guide.</p></div></div>
+          <div class="card glossary">
+            <div class="term"><b>School tuition balance</b><span>Amount of tuition still owed. It may go below zero after earnings exceed tuition.</span></div>
+            <div class="term"><b>Tuition credit</b><span>Negative tuition balance / amount earned beyond the configured tuition amount.</span></div>
+            <div class="term"><b>Personal wallet</b><span>Withdrawable amount: opening balance plus wallet allocations less payouts.</span></div>
+            <div class="term"><b>Payout</b><span>Recorded withdrawal from the personal wallet; not a time-earned payment calculation.</span></div>
+            <div class="term"><b>Wallet transfer</b><span>Staff action moving available tuition credit into the personal wallet.</span></div>
+            <div class="term"><b>Work assignment</b><span>Student’s assigned job or duty description within the department.</span></div>
+            <div class="term"><b>RFID reader</b><span>Keyboard-emulating card reader that submits a student identifier into the kiosk.</span></div>
+            <div class="term"><b>Session</b><span>Server-issued login state represented by a random cookie and stored token hash.</span></div>
+          </div>
+        </section>
+
+        <footer class="footer"><span>AUP Work Scholars · Product & engineering documentation</span><span>Single-file HTML · CSS and JavaScript embedded · No external libraries</span></footer>
+      </div>
+    </main>
+  </div>
+  <script>
+    (() => {
+      const body = document.body;
+      const toggle = document.getElementById('themeToggle');
+      const search = document.getElementById('search');
+      const sections = [...document.querySelectorAll('main section, main header#overview')];
+      const navLinks = [...document.querySelectorAll('#nav a')];
+      const sidebar = document.getElementById('sidebar');
+      let savedTheme = null;
+      try { savedTheme = localStorage.getItem('aupws-doc-theme'); } catch { /* local file storage can be disabled */ }
+      if (savedTheme) body.dataset.theme = savedTheme;
+      toggle.addEventListener('click', () => {
+        const next = body.dataset.theme === 'light' ? 'dark' : 'light';
+        body.dataset.theme = next;
+        try { localStorage.setItem('aupws-doc-theme', next); } catch { /* theme still changes for this page view */ }
+      });
+      document.getElementById('printButton').addEventListener('click', () => window.print());
+      document.getElementById('menuToggle').addEventListener('click', () => sidebar.classList.toggle('open'));
+      navLinks.forEach(link => link.addEventListener('click', () => sidebar.classList.remove('open')));
+      search.addEventListener('input', () => {
+        const term = search.value.trim().toLowerCase();
+        sections.forEach(section => {
+          const content = (section.innerText + ' ' + (section.dataset.search || '')).toLowerCase();
+          section.classList.toggle('hidden-search', Boolean(term) && !content.includes(term));
+        });
+      });
+      document.querySelectorAll('.copy').forEach(button => button.addEventListener('click', async () => {
+        const pre = button.parentElement;
+        const text = pre.innerText.replace(/^Copy\s*/, '').trim();
+        try { await navigator.clipboard.writeText(text); button.textContent = 'Copied'; }
+        catch { button.textContent = 'Select & copy'; }
+        setTimeout(() => button.textContent = 'Copy', 1400);
+      }));
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const id = entry.target.id;
+          navLinks.forEach(link => link.classList.toggle('active', link.getAttribute('href') === '#' + id));
+        });
+      }, { rootMargin: '-20% 0px -70% 0px' });
+      sections.forEach(section => { if (section.id) observer.observe(section); });
+    })();
+  </script>
+</body>
+</html>
