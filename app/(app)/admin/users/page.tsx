@@ -10,8 +10,8 @@ import type { Department, ProfileWithDept } from "@/lib/types";
 
 export const metadata = { title: "Users and assignments" };
 
-export default async function UsersPage({ searchParams }: { searchParams?: Promise<{ q?: string; page?: string }> | { q?: string; page?: string } }) {
-  const params = (await Promise.resolve(searchParams ?? {})) as { q?: string; page?: string };
+export default async function UsersPage({ searchParams }: { searchParams?: Promise<{ q?: string; page?: string }> }) {
+  const params = (await searchParams) ?? {};
   const q = String(params.q ?? "").trim();
   const requestedPage = Number(params.page ?? "1") || 1;
 
