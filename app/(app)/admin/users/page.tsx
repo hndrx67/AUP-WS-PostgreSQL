@@ -1,12 +1,13 @@
 import { requireAdmin } from "@/lib/auth";
 import { createPostgresClient } from "@/lib/postgres-client";
-import { createUserAccount, deleteUserAccount, setUserActive, updateUserAssignment } from "@/app/actions/users";
-import { ActionForm, Field } from "@/components/action-form";
+import { deleteUserAccount, setUserActive, updateUserAssignment } from "@/app/actions/users";
+import { ActionForm } from "@/components/action-form";
 import { Badge, Empty, PageHeader, Panel } from "@/components/ui";
 import { ROLE_LABEL } from "@/lib/nav";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { ChangeCredentialsDialog } from "@/components/change-credentials-dialog";
 import { DestructiveConfirmationDialog } from "@/components/destructive-confirmation-dialog";
+import { NewAccountForm } from "@/components/new-account-form";
 import type { Department, ProfileWithDept } from "@/lib/types";
 
 export const metadata = { title: "Users and assignments" };
@@ -144,29 +145,7 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
         </Panel>
 
         <Panel title="New account">
-          <ActionForm action={createUserAccount} submit="Create account" className="space-y-4 p-5">
-            <Field label="Role">
-              <select className="input" name="role" defaultValue="student">
-                <option value="student">Work scholar</option>
-                <option value="supervisor">Supervisor</option>
-                <option value="admin">Administrator</option>
-              </select>
-            </Field>
-            <Field label="Full name"><input className="input" name="full_name" required /></Field>
-            <Field label="Email"><input className="input" type="email" name="email" required /></Field>
-            <Field label="Temporary password"><input className="input" name="password" minLength={8} required autoComplete="off" /></Field>
-            <Field label="Department (not used for administrators)">
-              <select className="input" name="department_id" defaultValue="">
-                <option value="">No department</option>
-                {D.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Student ID"><input className="input" name="student_id" /></Field>
-              <Field label="Rate per hour"><input className="input" type="number" name="hourly_rate" min={0} step="0.01" defaultValue={0} /></Field>
-            </div>
-            <Field label="Work assignment (students)"><input className="input" name="work_assignment" placeholder="e.g. Library assistant" /></Field>
-          </ActionForm>
+          <NewAccountForm departments={D} />
         </Panel>
       </div>
     </>

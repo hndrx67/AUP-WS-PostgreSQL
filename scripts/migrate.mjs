@@ -9,6 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const schema = await readFile(resolve(here, "../database/schema.sql"), "utf8");
 const migrations = [
   { version: "002_rfid", file: "../database/migrations/002_rfid.sql" },
+  { version: "003_temporary_supervisor_credentials", file: "../database/migrations/003_temporary_supervisor_credentials.sql" },
 ];
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const client = await pool.connect();

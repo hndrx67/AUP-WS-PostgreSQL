@@ -27,6 +27,7 @@ create table profiles (
   school_tuition_balance numeric(10,2) not null default 0,
   financials_started_at timestamptz not null default now(),
   personal_wallet_opening_balance numeric(10,2) not null default 0 check (personal_wallet_opening_balance >= 0),
+  temporary_credentials boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );

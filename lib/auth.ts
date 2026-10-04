@@ -73,6 +73,7 @@ export async function requireRole(role: Role): Promise<ProfileWithDept> {
   if (!profile) redirect("/login");
   if (!profile.is_active) redirect(profile.role === "student" ? "/account-disabled" : "/login");
   if (profile.role !== role) redirect(homeFor(profile.role));
+  if (profile.role === "supervisor" && profile.temporary_credentials) redirect("/confirm-credentials");
   return profile;
 }
 

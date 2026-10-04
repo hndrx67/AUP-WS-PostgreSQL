@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth/password";
 import { verifyCurrentPassword } from "@/lib/auth/verify-current-password";
@@ -16,6 +17,7 @@ type NewAccount = {
   student_id: string | null;
   work_assignment: string | null;
   hourly_rate: number;
+  temporary_credentials?: boolean;
 };
 
 async function createAccount(a: NewAccount): Promise<ActionState> {
@@ -31,9 +33,9 @@ async function createAccount(a: NewAccount): Promise<ActionState> {
   try {
     const passwordHash = await hashPassword(a.password);
     await query(
-      `insert into profiles (email, password_hash, full_name, role, department_id, student_id, work_assignment, hourly_rate)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [a.email, passwordHash, a.full_name, a.role, a.department_id, a.student_id, a.work_assignment, a.hourly_rate],
+      `insert into profiles (email, password_hash, full_name, role, department_id, student_id, work_assignment, hourly_rate, temporary_credentials)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [a.email, passwordHash, a.full_name, a.role, a.department_id, a.student_id, a.work_assignment, a.hourly_rate, a.role === "supervisor" && a.temporary_credentials === true],
     );
     return { ok: `Created ${a.full_name}.` };
   } catch (error) {
@@ -80,9 +82,52 @@ export async function createUserAccount(_prev: ActionState, fd: FormData): Promi
     ...readAccount(fd),
     role,
     department_id: role === "admin" ? null : departmentId,
+    temporary_credentials: role === "supervisor" && String(fd.get("temporary_credentials") ?? "") === "true",
   });
   revalidatePath("/admin", "layout");
   return result;
+}
+
+/** A temporary supervisor must accept the supplied credentials or replace them before continuing. */
+export async function confirmTemporarySupervisorCredentials(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const me = await getSessionProfile();
+  if (!me?.is_active || me.role !== "supervisor" || !me.temporary_credentials) {
+    return { error: "This account does not need credential confirmation." };
+  }
+
+  const mode = String(fd.get("mode") ?? "");
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  const password = String(fd.get("password") ?? "");
+  const confirmation = String(fd.get("password_confirmation") ?? "");
+  let passwordHash: string | null = null;
+
+  if (mode === "update") {
+    if (!email && !password) return { error: "Enter a new email or password, or keep the provided credentials." };
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: "Enter a valid email address." };
+    if (password && password.length < 8) return { error: "Your new password must be at least 8 characters." };
+    if (password !== confirmation) return { error: "The passwords do not match." };
+    if (password) passwordHash = await hashPassword(password);
+  } else if (mode !== "accept") {
+    return { error: "Choose whether to update or keep the provided credentials." };
+  }
+
+  try {
+    const result = await query(
+      `update profiles set
+         email = case when $2::text is null then email else $2 end,
+         password_hash = case when $3::text is null then password_hash else $3 end,
+         temporary_credentials = false
+       where id = $1 and role = 'supervisor' and temporary_credentials = true`,
+      [me.id, mode === "update" && email ? email : null, passwordHash],
+    );
+    if (!result.rowCount) return { error: "Credential confirmation is no longer required. Sign in again." };
+  } catch (error) {
+    if ((error as { code?: string }).code === "23505") return { error: "That email address is already assigned to another account." };
+    return { error: "Could not confirm your account details. Please try again." };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/supervisor");
 }
 
 /** Admin override: move a user to another department and/or change a student's hourly rate. */

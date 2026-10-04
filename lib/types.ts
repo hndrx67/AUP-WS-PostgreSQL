@@ -26,6 +26,7 @@ export type Profile = {
   financials_started_at: string;
   personal_wallet_opening_balance: number;
   is_active: boolean;
+  temporary_credentials: boolean;
   created_at: string;
 };
 
