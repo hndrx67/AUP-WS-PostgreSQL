@@ -28,7 +28,7 @@ export default async function Home() {
         </p>
         <div className="mt-8 flex gap-3">
           <Link href="/login" className="btn btn-primary px-5 py-2.5">Sign in to your account</Link>
-          <Link href="/time-in-out" className="btn btn-outline px-5 py-2.5">Work scholar time clock</Link>
+          <Link href="/time-in-out" className="btn btn-outline px-5 py-2.5">DTR Time IN/OUT</Link>
         </div>
 
         <div className="mt-16 grid gap-4 md:grid-cols-3">
