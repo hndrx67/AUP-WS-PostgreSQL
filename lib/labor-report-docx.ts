@@ -69,7 +69,7 @@ function replaceTableRows(table: string, rows: string[]) {
 
 function updateRow(templateRow: string, values: string[], date?: string) {
   let index = 0;
-  return templateRow.replace(/<w:tc\b[\s\S]*?<\/w:tc>/g, (cell) => {
+  const row = templateRow.replace(/<w:tc\b[\s\S]*?<\/w:tc>/g, (cell) => {
     const cellIndex = index++;
     if (cellIndex === 0 && date === undefined) return cell;
     if (cellIndex >= values.length) return cell;
@@ -83,6 +83,8 @@ function updateRow(templateRow: string, values: string[], date?: string) {
     }
     return setCellText(cell, values[cellIndex], cellIndex === 0 || cellIndex === 2 || cellIndex === 3 || cellIndex === 4 ? "center" : undefined);
   });
+  // Paragraph IDs must be unique in a Word document; cloned template rows omit those optional IDs.
+  return row.replace(/\s+w14:(?:paraId|textId)="[^"]*"/g, "");
 }
 
 function metadataParagraph(pPr: string, firstLabel: string, firstValue: string, secondLabel: string, secondValue: string) {
@@ -134,7 +136,7 @@ export function buildLaborReportDocumentXml(templateXml: string, report: DocxLab
     const current = signerCellIndex++;
     return current === 1 ? setCellText(cell, report.scholarSignature, "center") : current === 3 ? setCellText(cell, report.supervisorSignature, "center") : cell;
   });
-  body = body.replace(signatureTable, replaceTableRows(signatureTable, [updatedSignerRow, signatureRows[1][0]]));
+  body = body.replace(signatureTable, signatureTable.replace(signerRow, updatedSignerRow));
 
   const section = /<w:sectPr\b[\s\S]*?<\/w:sectPr>/.exec(templateXml)?.[0];
   if (!section) throw new Error("The labor report template page setup is missing.");
