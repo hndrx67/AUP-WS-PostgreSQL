@@ -12,7 +12,22 @@ export function TimeInOutKiosk() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    const focusInput = () => inputRef.current?.focus({ preventScroll: true });
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") focusInput();
+    };
+
+    focusInput();
+    window.addEventListener("focus", focusInput);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", focusInput);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    inputRef.current?.focus({ preventScroll: true });
     if (state?.error) showToast(state.error, "error");
     if (state?.result) {
       const actionText = state.result.action === "clocked_in" ? "timed in" : "timed out";
@@ -39,6 +54,7 @@ export function TimeInOutKiosk() {
               <CreditCard className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
               <input
                 ref={inputRef}
+                autoFocus
                 className="input pl-10 text-lg"
                 name="identifier"
                 type="text"
@@ -50,6 +66,13 @@ export function TimeInOutKiosk() {
                 maxLength={100}
                 required
                 disabled={pending}
+                onBlur={() => {
+                  window.setTimeout(() => {
+                    if (document.hasFocus() && document.visibilityState === "visible") {
+                      inputRef.current?.focus({ preventScroll: true });
+                    }
+                  }, 100);
+                }}
               />
             </span>
           </label>
