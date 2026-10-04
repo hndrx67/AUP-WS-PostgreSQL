@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { resolveCookieSecurity } from "@/lib/cookie-security";
 import { query } from "@/lib/db";
 import type { ProfileWithDept, Role } from "@/lib/types";
 
@@ -21,10 +22,24 @@ export async function createSession(userId: string) {
     "insert into sessions (profile_id, token_hash, expires_at) values ($1, $2, now() + interval '7 days')",
     [userId, tokenHash(token)],
   );
+
   const store = await cookies();
+  let forwardedProto: string | null = null;
+  try {
+    forwardedProto = (await headers()).get("x-forwarded-proto");
+  } catch {
+    // Some server contexts, such as tests or non-request execution, do not have request headers.
+  }
+
+  const secure = resolveCookieSecurity({
+    nodeEnv: process.env.NODE_ENV,
+    forwardedProto,
+    appUrl: process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL,
+  });
+
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
