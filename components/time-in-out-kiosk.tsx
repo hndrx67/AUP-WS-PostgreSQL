@@ -44,7 +44,7 @@ export function TimeInOutKiosk() {
         <div className="mb-7 flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-accent-foreground">
           <ScanLine size={24} />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Work scholar time clock</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">DTR Time IN/OUT</h1>
         <p className="mt-2 text-sm text-muted-foreground">Enter your student ID or tap your RFID card on the scanner.</p>
 
         <form action={formAction} className="mt-7 space-y-4">
