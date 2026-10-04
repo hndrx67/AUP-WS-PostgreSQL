@@ -36,9 +36,6 @@ export default async function ProfilePage() {
               className="object-cover"
             />
           )}
-          <div className="absolute right-3 top-3">
-            <ProfileImageUpload kind="cover" label="Change cover photo" className="rounded-lg bg-card/95 p-2 shadow-sm" />
-          </div>
         </div>
 
         <div className="flex flex-col gap-4 px-5 pb-6 sm:flex-row sm:items-end sm:px-8">
@@ -63,10 +60,11 @@ export default async function ProfilePage() {
           </ActionForm>
         </Panel>
 
-        <Panel title="Profile photo" description="Upload a JPG, PNG, or WebP image. Images are converted to WebP and saved on the app server.">
-          <div className="flex items-center gap-4 p-5">
+        <Panel title="Customize Identity" description="Update your profile and cover photos. JPG, PNG, and WebP images are converted to WebP and saved on the app server.">
+          <div className="flex flex-wrap items-center gap-4 p-5">
             <ProfileAvatar profile={profile} size="md" />
-            <ProfileImageUpload kind="avatar" label="Upload photo" />
+            <ProfileImageUpload kind="avatar" label="Upload photo" canRemove={Boolean(profile.avatar_path)} />
+            <ProfileImageUpload kind="cover" label="Change cover photo" />
           </div>
         </Panel>
       </div>

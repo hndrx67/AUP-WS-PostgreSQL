@@ -106,3 +106,27 @@ export async function uploadProfileImage(_prev: ActionState, fd: FormData): Prom
   revalidatePath("/", "layout");
   return { ok: kind === "avatar" ? "Profile photo updated." : "Cover photo updated." };
 }
+
+export async function removeMyProfileImage(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const me = await getSessionProfile();
+  if (!me?.is_active) return { error: "Sign in to edit your profile." };
+  if (String(fd.get("kind") ?? "") !== "avatar") return { error: "Only profile photos can be removed here." };
+  if (!me.avatar_path) return { error: "You do not have a custom profile photo." };
+
+  try {
+    const result = await query(
+      "update profiles set avatar_path = null where id = $1 and avatar_path = $2",
+      [me.id, me.avatar_path],
+    );
+    if (!result.rowCount) return { error: "Your profile photo has already changed. Refresh and try again." };
+
+    const oldFile = resolveProfileImage(path.basename(me.avatar_path));
+    if (oldFile) await unlink(oldFile).catch(() => undefined);
+  } catch {
+    return { error: "Could not remove your profile photo. Please try again." };
+  }
+
+  revalidatePath("/profile");
+  revalidatePath("/", "layout");
+  return { ok: "Profile photo removed." };
+}
